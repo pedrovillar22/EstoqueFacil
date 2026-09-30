@@ -1,0 +1,27 @@
+{
+  "name": "estoquefacil",
+  "version": "1.0.0",
+  "description": "Sistema web para controle de estoque e gestão comercial voltado a micro, pequenos e médios empreendedores — como lojistas, mercadinhos, lojas de roupas, papelarias e comércios em geral.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedrovillar22/EstoqueFacil.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pedrovillar22/EstoqueFacil/issues"
+  },
+  "homepage": "https://github.com/pedrovillar22/EstoqueFacil#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
