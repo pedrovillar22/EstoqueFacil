@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Início</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f4f7; margin: 0; padding: 32px; }
+    button { padding: 8px 16px; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>EstoqueFácil</h1>
+  <p id="boas-vindas">Carregando...</p>
+  <button id="sair">Sair</button>
+
+  <script>
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then((usuario) => {
+        document.getElementById('boas-vindas').textContent =
+          'Olá, ' + usuario.nome + ' (' + usuario.perfil + ')';
+      });
+
+    document.getElementById('sair').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+  </script>
+</body>
+</html>
