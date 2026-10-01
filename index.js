@@ -66,6 +66,12 @@ app.get('/api/me', (req, res) => {
   res.json(req.session.usuario);
 });
 
+
+app.get('/produtos.html', exigirLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'produtos.html'));
+});
+
+app.use('/api/produtos', require('./rotas-produtos'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
