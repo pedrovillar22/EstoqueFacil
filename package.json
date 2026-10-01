@@ -22,6 +22,10 @@
   },
   "homepage": "https://github.com/pedrovillar22/EstoqueFacil#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.5",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "pg": "^8.23.1"
   }
 }
