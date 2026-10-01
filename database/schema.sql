@@ -16,3 +16,13 @@ CREATE TABLE IF NOT EXISTS produtos (
   preco NUMERIC(10,2) NOT NULL CHECK (preco >= 0),
   criado_em TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS movimentacoes (
+  id SERIAL PRIMARY KEY,
+  produto_id INTEGER NOT NULL REFERENCES produtos(id),
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+  tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('entrada', 'saida')),
+  quantidade INTEGER NOT NULL CHECK (quantidade > 0),
+  observacao VARCHAR(255),
+  criado_em TIMESTAMP NOT NULL DEFAULT NOW()
+);
