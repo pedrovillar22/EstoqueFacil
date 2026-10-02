@@ -4,31 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EstoqueFácil - Início</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f2f4f7; margin: 0; padding: 32px; }
-    button { padding: 8px 16px; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-  </style>
+  <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
-  <h1>EstoqueFácil</h1>
-  <p id="boas-vindas">Carregando...</p>
-  <p><a href="/produtos.html">Cadastrar produto</a></p>
-  <p><a href="/estoque.html">Registrar entrada de estoque</a></p>
-  <p><a href="/vendas.html">Registrar venda</a></p>
-  <button id="sair">Sair</button>
+  <main class="container">
+    <h1 id="boas-vindas">Carregando...</h1>
 
+    <div class="atalhos">
+      <a class="atalho" href="/produtos.html">
+        <strong>Cadastrar produto</strong>
+        <span>Adicione novos produtos ao catálogo</span>
+      </a>
+      <a class="atalho" href="/estoque.html">
+        <strong>Registrar entrada de estoque</strong>
+        <span>Some as mercadorias que chegaram</span>
+      </a>
+      <a class="atalho" href="/vendas.html">
+        <strong>Registrar venda</strong>
+        <span>Dê baixa no estoque e veja o valor total</span>
+      </a>
+    </div>
+  </main>
+
+  <script src="/menu.js"></script>
   <script>
     fetch('/api/me')
       .then((r) => r.json())
       .then((usuario) => {
-        document.getElementById('boas-vindas').textContent =
-          'Olá, ' + usuario.nome + ' (' + usuario.perfil + ')';
+        document.getElementById('boas-vindas').textContent = 'Olá, ' + usuario.nome + '!';
       });
-
-    document.getElementById('sair').addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST' });
-      window.location.href = '/login.html';
-    });
   </script>
 </body>
 </html>
