@@ -26,3 +26,5 @@ CREATE TABLE IF NOT EXISTS movimentacoes (
   observacao VARCHAR(255),
   criado_em TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE movimentacoes ADD COLUMN IF NOT EXISTS valor_total NUMERIC(10,2);
