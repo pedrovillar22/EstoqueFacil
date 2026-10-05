@@ -22,6 +22,6 @@ O Documento de Visão completo, com requisitos, regras de negócio e casos de us
 
 ---
 
-**Autores:** Pedro Henrique Monguilhott Villar e Alexei Vladimir  
+**Autores:** Pedro Henrique Monguilhott Villar,Alexei Vladimir e Augusto Henrique Pontes
 **Curso:** Análise e Desenvolvimento de Sistemas — Uninassau  
 **Disciplina:** Tópicos Integradores
