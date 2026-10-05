@@ -71,7 +71,12 @@ app.get('/produtos.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'produtos.html'));
 });
 
+app.get('/estoque.html', exigirLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'estoque.html'));
+});
+
 app.use('/api/produtos', require('./rotas-produtos'));
+app.use('/api/estoque', require('./rotas-estoque'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
