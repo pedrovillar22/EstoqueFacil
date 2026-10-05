@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Registrar Venda</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f4f7; margin: 0; padding: 32px; }
+    .caixa { background: #fff; padding: 24px; border-radius: 8px; max-width: 420px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { margin-top: 0; font-size: 22px; }
+    label { display: block; margin-top: 12px; font-size: 14px; }
+    input, select { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    .botoes { display: flex; gap: 8px; margin-top: 20px; }
+    button { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; }
+    #registrar { background: #2563eb; color: #fff; }
+    #cancelar { background: #e5e7eb; }
+    #mensagem { margin-top: 12px; font-size: 14px; min-height: 18px; }
+    .erro { color: #b91c1c; }
+    .sucesso { color: #15803d; }
+    table { border-collapse: collapse; margin-top: 24px; background: #fff; }
+    th, td { border: 1px solid #d1d5db; padding: 6px 12px; font-size: 14px; text-align: left; }
+  </style>
+</head>
+<body>
+  <div class="caixa">
+    <h1>Registrar Venda</h1>
+    <form id="formulario">
+      <label for="produto">Produto</label>
+      <select id="produto">
+        <option value="">Selecione um produto</option>
+      </select>
+      <label for="quantidade">Quantidade vendida</label>
+      <input id="quantidade" type="number" min="1" step="1">
+      <div class="botoes">
+        <button type="submit" id="registrar">Registrar venda</button>
+        <button type="button" id="cancelar">Cancelar</button>
+      </div>
+      <div id="mensagem"></div>
+    </form>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Qtd disponível</th><th>Preço</th></tr>
+    </thead>
+    <tbody id="lista"></tbody>
+  </table>
+
+  <script>
+    const formulario = document.getElementById('formulario');
+    const mensagem = document.getElementById('mensagem');
+    const lista = document.getElementById('lista');
+    const selectProduto = document.getElementById('produto');
+
+    function mostrar(texto, classe) {
+      mensagem.textContent = texto;
+      mensagem.className = classe;
+    }
+
+    function formatarReais(valor) {
+      return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
+    }
+
+    async function carregarProdutos() {
+      const resposta = await fetch('/api/produtos');
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+      const produtos = await resposta.json();
+
+      const escolhido = selectProduto.value;
+      selectProduto.innerHTML = '<option value="">Selecione um produto</option>';
+      lista.innerHTML = '';
+
+      produtos.forEach((p) => {
+        const opcao = document.createElement('option');
+        opcao.value = p.id;
+        opcao.textContent = p.nome + ' (' + p.quantidade + ' disponíveis)';
+        selectProduto.appendChild(opcao);
+
+        const linha = document.createElement('tr');
+        [p.nome, p.sku, p.categoria, p.quantidade, formatarReais(p.preco)].forEach((valor) => {
+          const celula = document.createElement('td');
+          celula.textContent = valor;
+          linha.appendChild(celula);
+        });
+        lista.appendChild(linha);
+      });
+
+      selectProduto.value = escolhido;
+    }
+
+    formulario.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      mostrar('', '');
+
+      const resposta = await fetch('/api/vendas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          produto_id: selectProduto.value,
+          quantidade: document.getElementById('quantidade').value,
+        }),
+      });
+
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+      if (resposta.ok) {
+        mostrar(
+          'Venda registrada! Total: ' + formatarReais(dados.valor_total) +
+          '. "' + dados.nome + '" agora tem ' + dados.quantidade + ' unidades.',
+          'sucesso'
+        );
+        formulario.reset();
+        carregarProdutos();
+      } else {
+        mostrar(dados.erro, 'erro');
+      }
+    });
+
+    document.getElementById('cancelar').addEventListener('click', () => {
+      formulario.reset();
+      window.location.href = '/inicio.html';
+    });
+
+    carregarProdutos();
+  </script>
+</body>
+</html>
