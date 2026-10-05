@@ -6,3 +6,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
   perfil VARCHAR(20) NOT NULL DEFAULT 'funcionario',
   criado_em TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS produtos (
+  id SERIAL PRIMARY KEY,
+  nome VARCHAR(150) NOT NULL,
+  sku VARCHAR(50) NOT NULL UNIQUE,
+  categoria VARCHAR(100) NOT NULL,
+  quantidade INTEGER NOT NULL DEFAULT 0 CHECK (quantidade >= 0),
+  preco NUMERIC(10,2) NOT NULL CHECK (preco >= 0),
+  criado_em TIMESTAMP NOT NULL DEFAULT NOW()
+);
