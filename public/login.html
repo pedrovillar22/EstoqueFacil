@@ -4,25 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EstoqueFácil - Entrar</title>
+  <link rel="stylesheet" href="/estilo.css">
   <style>
-    body { font-family: Arial, sans-serif; background: #f2f4f7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .caixa { background: #fff; padding: 32px; border-radius: 8px; width: 320px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h1 { margin-top: 0; font-size: 22px; text-align: center; }
-    label { display: block; margin-top: 12px; font-size: 14px; }
-    input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
-    button { width: 100%; margin-top: 20px; padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; }
-    #erro { color: #b91c1c; margin-top: 12px; font-size: 14px; min-height: 18px; }
+    body { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .login { width: 360px; }
+    .login h1 { text-align: center; color: #1e3a5f; margin-bottom: 4px; }
+    .login .subtitulo { text-align: center; color: #64748b; font-size: 14px; margin: 0 0 8px; }
+    .login button { width: 100%; }
   </style>
 </head>
 <body>
-  <div class="caixa">
+  <div class="card login">
     <h1>EstoqueFácil</h1>
+    <p class="subtitulo">Entre para gerenciar seu estoque</p>
     <form id="formulario">
       <label for="email">E-mail</label>
       <input type="email" id="email" required>
       <label for="senha">Senha</label>
       <input type="password" id="senha" required>
-      <button type="submit">Entrar</button>
+      <div class="botoes">
+        <button type="submit" class="primario">Entrar</button>
+      </div>
       <div id="erro"></div>
     </form>
   </div>

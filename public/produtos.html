@@ -4,52 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EstoqueFácil - Cadastrar Produto</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f2f4f7; margin: 0; padding: 32px; }
-    .caixa { background: #fff; padding: 24px; border-radius: 8px; max-width: 420px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h1 { margin-top: 0; font-size: 22px; }
-    label { display: block; margin-top: 12px; font-size: 14px; }
-    input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
-    .botoes { display: flex; gap: 8px; margin-top: 20px; }
-    button { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 15px; }
-    #cadastrar { background: #2563eb; color: #fff; }
-    #cancelar { background: #e5e7eb; }
-    #mensagem { margin-top: 12px; font-size: 14px; min-height: 18px; }
-    .erro { color: #b91c1c; }
-    .sucesso { color: #15803d; }
-    table { border-collapse: collapse; margin-top: 24px; background: #fff; }
-    th, td { border: 1px solid #d1d5db; padding: 6px 12px; font-size: 14px; text-align: left; }
-  </style>
+  <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
-  <div class="caixa">
+  <main class="container">
     <h1>Cadastrar Produto</h1>
-    <form id="formulario">
-      <label for="nome">Nome</label>
-      <input id="nome">
-      <label for="sku">Código (SKU)</label>
-      <input id="sku">
-      <label for="categoria">Categoria</label>
-      <input id="categoria">
-      <label for="quantidade">Quantidade inicial</label>
-      <input id="quantidade" type="number" min="0" step="1">
-      <label for="preco">Preço (R$)</label>
-      <input id="preco" type="number" min="0" step="0.01">
-      <div class="botoes">
-        <button type="submit" id="cadastrar">Cadastrar</button>
-        <button type="button" id="cancelar">Cancelar</button>
-      </div>
-      <div id="mensagem"></div>
-    </form>
-  </div>
 
-  <table>
-    <thead>
-      <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Qtd</th><th>Preço</th></tr>
-    </thead>
-    <tbody id="lista"></tbody>
-  </table>
+    <div class="card estreito">
+      <form id="formulario">
+        <label for="nome">Nome</label>
+        <input id="nome">
+        <label for="sku">Código (SKU)</label>
+        <input id="sku">
+        <label for="categoria">Categoria</label>
+        <input id="categoria">
+        <label for="quantidade">Quantidade inicial</label>
+        <input id="quantidade" type="number" min="0" step="1">
+        <label for="preco">Preço (R$)</label>
+        <input id="preco" type="number" min="0" step="0.01">
+        <div class="botoes">
+          <button type="submit" id="cadastrar" class="primario">Cadastrar</button>
+          <button type="button" id="cancelar" class="secundario">Cancelar</button>
+        </div>
+        <div id="mensagem"></div>
+      </form>
+    </div>
 
+    <div class="card">
+      <h2>Produtos cadastrados</h2>
+      <table>
+        <thead>
+          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Qtd</th><th>Preço</th></tr>
+        </thead>
+        <tbody id="lista"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/menu.js"></script>
   <script>
     const formulario = document.getElementById('formulario');
     const mensagem = document.getElementById('mensagem');
@@ -58,6 +50,10 @@
     function mostrar(texto, classe) {
       mensagem.textContent = texto;
       mensagem.className = classe;
+    }
+
+    function formatarReais(valor) {
+      return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
     }
 
     async function carregarLista() {
@@ -70,7 +66,7 @@
       lista.innerHTML = '';
       produtos.forEach((p) => {
         const linha = document.createElement('tr');
-        [p.nome, p.sku, p.categoria, p.quantidade, Number(p.preco).toFixed(2)].forEach((valor) => {
+        [p.nome, p.sku, p.categoria, p.quantidade, formatarReais(p.preco)].forEach((valor) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
           linha.appendChild(celula);
