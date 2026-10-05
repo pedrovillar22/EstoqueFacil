@@ -9,6 +9,12 @@ function exigirLoginApi(req, res, next) {
   }
   next();
 }
+function exigirAdministrador(req, res, next) {
+  if (req.session.usuario.perfil !== 'administrador') {
+    return res.status(403).json({ erro: 'Apenas o administrador pode cadastrar produtos.' });
+  }
+  next();
+}
 
 router.get('/', exigirLoginApi, async (req, res) => {
   try {
@@ -22,7 +28,7 @@ router.get('/', exigirLoginApi, async (req, res) => {
   }
 });
 
-router.post('/', exigirLoginApi, async (req, res) => {
+ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   const { nome, sku, categoria, quantidade, preco } = req.body;
 
   const nomeLimpo = (nome || '').trim();
