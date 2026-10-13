@@ -28,3 +28,4 @@ CREATE TABLE IF NOT EXISTS movimentacoes (
 );
 
 ALTER TABLE movimentacoes ADD COLUMN IF NOT EXISTS valor_total NUMERIC(10,2);
+ALTER TABLE produtos ADD COLUMN IF NOT EXISTS estoque_minimo INTEGER NOT NULL DEFAULT 5 CHECK (estoque_minimo >= 0);

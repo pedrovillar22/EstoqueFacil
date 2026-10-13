@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Alerta de Estoque Baixo</title>
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Alerta de Estoque Baixo</h1>
+
+    <div class="card">
+      <h2>Produtos abaixo do estoque mínimo</h2>
+      <div id="mensagem"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>SKU</th>
+            <th>Categoria</th>
+            <th>Qtd atual</th>
+            <th>Estoque mínimo</th>
+            <th>Faltam</th>
+          </tr>
+        </thead>
+        <tbody id="lista"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/menu.js"></script>
+  <script>
+    const mensagem = document.getElementById('mensagem');
+    const lista = document.getElementById('lista');
+
+    function mostrar(texto, classe) {
+      mensagem.textContent = texto;
+      mensagem.className = classe;
+    }
+
+    async function carregarAlertas() {
+      const resposta = await fetch('/api/alertas/baixo');
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+      if (!resposta.ok) {
+        mostrar(dados.erro, 'erro');
+        return;
+      }
+
+      lista.innerHTML = '';
+
+      if (dados.length === 0) {
+        mostrar('Nenhum produto com estoque baixo no momento.', 'sucesso');
+        return;
+      }
+
+      mostrar(dados.length + ' produto(s) com estoque baixo. Faça uma entrada de estoque para repor.', 'erro');
+
+      dados.forEach((p) => {
+        const linha = document.createElement('tr');
+        [p.nome, p.sku, p.categoria, p.quantidade, p.estoque_minimo, p.faltam].forEach((valor) => {
+          const celula = document.createElement('td');
+          celula.textContent = valor;
+          linha.appendChild(celula);
+        });
+        lista.appendChild(linha);
+      });
+    }
+
+    carregarAlertas();
+  </script>
+</body>
+</html>
