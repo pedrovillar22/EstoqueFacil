@@ -4,6 +4,7 @@
     { href: '/produtos.html', texto: 'Produtos' },
     { href: '/estoque.html', texto: 'Entrada de estoque' },
     { href: '/vendas.html', texto: 'Vendas' },
+    { href: '/alertas.html', texto: 'Alertas' },
   ];
 
   const itens = links
