@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Histórico de Movimentações</title>
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Histórico de Movimentações</h1>
+
+    <div class="card">
+      <label for="tipo">Filtrar por tipo</label>
+      <select id="tipo">
+        <option value="">Todas</option>
+        <option value="entrada">Entradas</option>
+        <option value="saida">Saídas (vendas)</option>
+      </select>
+      <div id="mensagem"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Data e hora</th>
+            <th>Produto</th>
+            <th>SKU</th>
+            <th>Tipo</th>
+            <th>Qtd</th>
+            <th>Valor total</th>
+            <th>Usuário</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody id="lista"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/menu.js"></script>
+  <script>
+    const mensagem = document.getElementById('mensagem');
+    const lista = document.getElementById('lista');
+    const selectTipo = document.getElementById('tipo');
+
+    function mostrar(texto, classe) {
+      mensagem.textContent = texto;
+      mensagem.className = classe;
+    }
+
+    function formatarValor(valor) {
+      if (valor === null || valor === undefined) return '-';
+      return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
+    }
+
+    async function carregarHistorico() {
+      const resposta = await fetch('/api/historico?tipo=' + encodeURIComponent(selectTipo.value));
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+      lista.innerHTML = '';
+
+      if (!resposta.ok) {
+        mostrar(dados.erro, 'erro');
+        return;
+      }
+
+      if (dados.length === 0) {
+        mostrar('Nenhuma movimentação registrada.', 'sucesso');
+        return;
+      }
+
+      mostrar('', '');
+
+      dados.forEach((m) => {
+        const linha = document.createElement('tr');
+        [
+          new Date(m.criado_em).toLocaleString('pt-BR'),
+          m.produto,
+          m.sku,
+          m.tipo === 'entrada' ? 'Entrada' : 'Saída',
+          m.quantidade,
+          formatarValor(m.valor_total),
+          m.usuario,
+          m.observacao || '-',
+        ].forEach((valor) => {
+          const celula = document.createElement('td');
+          celula.textContent = valor;
+          linha.appendChild(celula);
+        });
+        lista.appendChild(linha);
+      });
+    }
+
+    selectTipo.addEventListener('change', carregarHistorico);
+    carregarHistorico();
+  </script>
+</body>
+</html>
