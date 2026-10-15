@@ -5,6 +5,7 @@
     { href: '/estoque.html', texto: 'Entrada de estoque' },
     { href: '/vendas.html', texto: 'Vendas' },
     { href: '/alertas.html', texto: 'Alertas' },
+    { href: '/reposicao.html', texto: 'Reposição' },
     { href: '/historico.html', texto: 'Histórico' },
   ];
 
