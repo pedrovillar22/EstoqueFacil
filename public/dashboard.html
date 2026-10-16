@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Dashboard</title>
+  <link rel="stylesheet" href="/estilo.css">
+  <style>
+    .resumo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .resumo .card { margin: 0; text-align: center; }
+    .resumo .valor { font-size: 28px; font-weight: bold; margin: 8px 0 4px; }
+    .resumo .rotulo { font-size: 14px; opacity: 0.8; }
+    .resumo .valor.alerta { color: #c0392b; }
+    .duas-colunas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .duas-colunas .card { margin: 0; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Dashboard</h1>
+    <div id="mensagem"></div>
+
+    <div class="resumo">
+      <div class="card">
+        <div class="rotulo">Produtos cadastrados</div>
+        <div class="valor" id="total-produtos">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Unidades em estoque</div>
+        <div class="valor" id="total-unidades">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Valor do estoque</div>
+        <div class="valor" id="valor-estoque">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Estoque baixo</div>
+        <div class="valor" id="estoque-baixo">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Vendas no mês</div>
+        <div class="valor" id="vendas-mes">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Faturamento no mês</div>
+        <div class="valor" id="faturamento-mes">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Entradas no mês</div>
+        <div class="valor" id="entradas-mes">-</div>
+      </div>
+    </div>
+
+    <div class="duas-colunas">
+      <div class="card">
+        <h2>Mais vendidos (últimos 30 dias)</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Unidades vendidas</th>
+            </tr>
+          </thead>
+          <tbody id="mais-vendidos"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Últimas movimentações</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Produto</th>
+              <th>Tipo</th>
+              <th>Qtd</th>
+            </tr>
+          </thead>
+          <tbody id="ultimas"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/menu.js"></script>
+  <script>
+    const mensagem = document.getElementById('mensagem');
+
+    function dinheiro(valor) {
+      return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function dataHora(texto) {
+      return new Date(texto).toLocaleString('pt-BR');
+    }
+
+    function preencherTabela(idTbody, linhas, vazioColunas) {
+      const tbody = document.getElementById(idTbody);
+      tbody.innerHTML = '';
+
+      if (linhas.length === 0) {
+        const linha = document.createElement('tr');
+        const celula = document.createElement('td');
+        celula.colSpan = vazioColunas;
+        celula.textContent = 'Nenhum registro ainda.';
+        linha.appendChild(celula);
+        tbody.appendChild(linha);
+        return;
+      }
+
+      linhas.forEach((valores) => {
+        const linha = document.createElement('tr');
+        valores.forEach((valor) => {
+          const celula = document.createElement('td');
+          celula.textContent = valor;
+          linha.appendChild(celula);
+        });
+        tbody.appendChild(linha);
+      });
+    }
+
+    async function carregarDashboard() {
+      const resposta = await fetch('/api/dashboard/resumo');
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+      if (!resposta.ok) {
+        mensagem.textContent = dados.erro;
+        mensagem.className = 'erro';
+        return;
+      }
+
+      document.getElementById('total-produtos').textContent = dados.produtos.total_produtos;
+      document.getElementById('total-unidades').textContent = dados.produtos.total_unidades;
+      document.getElementById('valor-estoque').textContent = dinheiro(dados.produtos.valor_estoque);
+
+      const baixo = document.getElementById('estoque-baixo');
+      baixo.textContent = dados.estoque_baixo;
+      if (dados.estoque_baixo > 0) {
+        baixo.classList.add('alerta');
+      }
+
+      document.getElementById('vendas-mes').textContent = dados.vendas_mes.qtd_vendas;
+      document.getElementById('faturamento-mes').textContent = dinheiro(dados.vendas_mes.faturamento);
+      document.getElementById('entradas-mes').textContent = dados.entradas_mes.qtd_entradas;
+
+      preencherTabela(
+        'mais-vendidos',
+        dados.mais_vendidos.map((p) => [p.nome, p.vendidos]),
+        2
+      );
+
+      preencherTabela(
+        'ultimas',
+        dados.ultimas_movimentacoes.map((m) => [
+          dataHora(m.criado_em),
+          m.produto,
+          m.tipo === 'entrada' ? 'Entrada' : 'Venda',
+          m.quantidade,
+        ]),
+        4
+      );
+    }
+
+    carregarDashboard();
+  </script>
+</body>
+</html>

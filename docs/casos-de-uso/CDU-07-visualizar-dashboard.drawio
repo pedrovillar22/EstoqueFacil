@@ -1,0 +1,22 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="CDU-07 Visualizar Dashboard" id="cdu07">
+    <mxGraphModel dx="912" dy="480" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="912" pageHeight="480" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="sistema" value="EstoqueFácil" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=20;spacingTop=10;fontStyle=1;fontSize=20;fontColor=#23588c;strokeColor=#23588c;strokeWidth=2;fillColor=none;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="302" y="39" width="550" height="405" as="geometry"/>
+        </mxCell>
+        <mxCell id="ator" value="Usuário" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="67" y="158" width="80" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc" value="Visualizar Dashboard" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e8eef6;strokeColor=#23588c;strokeWidth=2;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="398" y="170" width="370" height="141" as="geometry"/>
+        </mxCell>
+        <mxCell id="ligacao" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="ator" target="uc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
