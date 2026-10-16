@@ -87,12 +87,17 @@ app.get('/historico.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'historico.html'));
 });
 
+app.get('/dashboard.html', exigirLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
 app.use('/api/produtos', require('./rotas-produtos'));
 app.use('/api/estoque', require('./rotas-estoque'));
 app.use('/api/vendas', require('./rotas-vendas'));
 app.use('/api/alertas', require('./rotas-alertas'));
 app.use('/api/historico', require('./rotas-historico'));
 app.use('/api/reposicao', require('./rotas-reposicao'));
+app.use('/api/dashboard', require('./rotas-dashboard'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {

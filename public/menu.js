@@ -1,6 +1,7 @@
 (function () {
   const links = [
     { href: '/inicio.html', texto: 'Início' },
+    { href: '/dashboard.html', texto: 'Dashboard' },
     { href: '/produtos.html', texto: 'Produtos' },
     { href: '/estoque.html', texto: 'Entrada de estoque' },
     { href: '/vendas.html', texto: 'Vendas' },
