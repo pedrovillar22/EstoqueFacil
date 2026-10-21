@@ -28,7 +28,7 @@ router.get('/', exigirLoginApi, async (req, res) => {
   }
 });
 
- router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
+router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   const { nome, sku, categoria, quantidade, preco } = req.body;
 
   const nomeLimpo = (nome || '').trim();
@@ -47,18 +47,34 @@ router.get('/', exigirLoginApi, async (req, res) => {
     return res.status(400).json({ erro: 'Informe um preço válido (maior ou igual a zero).' });
   }
 
+  const cliente = await pool.connect();
   try {
-    const resultado = await pool.query(
+    await cliente.query('BEGIN');
+
+    const resultado = await cliente.query(
       'INSERT INTO produtos (nome, sku, categoria, quantidade, preco) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, sku',
       [nomeLimpo, skuLimpo, categoriaLimpa, qtd, valor]
     );
-    res.status(201).json(resultado.rows[0]);
+    const produto = resultado.rows[0];
+
+    if (qtd > 0) {
+      await cliente.query(
+        'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, observacao) VALUES ($1, $2, $3, $4, $5)',
+        [produto.id, req.session.usuario.id, 'entrada', qtd, 'Quantidade inicial do cadastro']
+      );
+    }
+
+    await cliente.query('COMMIT');
+    res.status(201).json(produto);
   } catch (erro) {
+    await cliente.query('ROLLBACK');
     if (erro.code === '23505') {
       return res.status(409).json({ erro: 'Já existe um produto com esse código (SKU).' });
     }
     console.error(erro);
     res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+  } finally {
+    cliente.release();
   }
 });
 
