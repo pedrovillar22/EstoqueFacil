@@ -15,7 +15,7 @@
       <select id="tipo">
         <option value="">Todas</option>
         <option value="entrada">Entradas</option>
-        <option value="saida">Saídas (vendas)</option>
+        <option value="saida">Vendas</option>
       </select>
       <div id="mensagem"></div>
       <table>
@@ -80,7 +80,7 @@
           new Date(m.criado_em).toLocaleString('pt-BR'),
           m.produto,
           m.sku,
-          m.tipo === 'entrada' ? 'Entrada' : 'Saída',
+          m.tipo === 'entrada' ? 'Entrada' : 'Venda',
           m.quantidade,
           formatarValor(m.valor_total),
           m.usuario,
