@@ -8,9 +8,14 @@
 </head>
 <body>
   <main class="container">
-    <h1>Cadastrar Produto</h1>
+    <h1 id="titulo">Cadastrar Produto</h1>
 
-    <div class="card estreito">
+    <div class="card estreito" id="aviso-funcionario" style="display: none;">
+      <p><strong>Apenas o administrador pode cadastrar produtos.</strong></p>
+      <p>Você pode consultar a lista de produtos cadastrados logo abaixo.</p>
+    </div>
+
+    <div class="card estreito" id="cartao-formulario">
       <form id="formulario">
         <label for="nome">Nome</label>
         <input id="nome">
@@ -74,6 +79,17 @@
         lista.appendChild(linha);
       });
     }
+
+    // Funcionário não vê o formulário: aparece um aviso no lugar
+    fetch('/api/me')
+      .then((r) => r.json())
+      .then((usuario) => {
+        if (usuario.perfil && usuario.perfil !== 'administrador') {
+          document.getElementById('cartao-formulario').style.display = 'none';
+          document.getElementById('aviso-funcionario').style.display = 'block';
+          document.getElementById('titulo').textContent = 'Produtos';
+        }
+      });
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
