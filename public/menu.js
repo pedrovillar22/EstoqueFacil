@@ -10,18 +10,18 @@
     { href: '/historico.html', texto: 'Histórico' },
   ];
 
-  const itens = links
-    .map((l) => {
-      const ativo = window.location.pathname === l.href ? ' class="ativo"' : '';
-      return '<a href="' + l.href + '"' + ativo + '>' + l.texto + '</a>';
-    })
-    .join('');
+  function montarLink(l) {
+    const ativo = window.location.pathname === l.href ? ' class="ativo"' : '';
+    return '<a href="' + l.href + '"' + ativo + '>' + l.texto + '</a>';
+  }
+
+  const itens = links.map(montarLink).join('');
 
   const topo = document.createElement('header');
   topo.className = 'topo';
   topo.innerHTML =
     '<span class="logo">EstoqueFácil</span>' +
-    '<nav>' + itens + '</nav>' +
+    '<nav id="menu-principal">' + itens + '</nav>' +
     '<span class="usuario" id="nome-usuario"></span>' +
     '<button class="sair" id="botao-sair">Sair</button>';
   document.body.insertBefore(topo, document.body.firstChild);
@@ -30,6 +30,11 @@
     .then((r) => r.json())
     .then((usuario) => {
       document.getElementById('nome-usuario').textContent = usuario.nome;
+      if (usuario.perfil === 'administrador') {
+        document
+          .getElementById('menu-principal')
+          .insertAdjacentHTML('beforeend', montarLink({ href: '/usuarios.html', texto: 'Usuários' }));
+      }
     });
 
   document.getElementById('botao-sair').addEventListener('click', async () => {
