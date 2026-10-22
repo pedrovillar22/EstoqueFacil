@@ -8,6 +8,7 @@
     { href: '/alertas.html', texto: 'Alertas' },
     { href: '/reposicao.html', texto: 'Reposição' },
     { href: '/historico.html', texto: 'Histórico' },
+    { href: '/planos.html', texto: 'Planos' },
   ];
 
   function montarLink(l) {

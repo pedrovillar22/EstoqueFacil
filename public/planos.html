@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Planos</title>
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Planos</h1>
+
+    <div class="card">
+      <h2>Seu plano atual: <span id="plano-atual"></span></h2>
+      <p id="uso"></p>
+      <p id="aviso-funcionario" style="display: none;"><strong>Apenas o administrador pode alterar o plano.</strong></p>
+      <div id="mensagem"></div>
+    </div>
+
+    <div id="planos" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;"></div>
+
+    <p style="margin-top: 16px;"><small>Pagamento não incluído nesta versão: a troca de plano é simulada.</small></p>
+  </main>
+
+  <script src="/menu.js"></script>
+  <script>
+    const mensagem = document.getElementById('mensagem');
+    let ehAdministrador = false;
+
+    function mostrar(texto, classe) {
+      mensagem.textContent = texto;
+      mensagem.className = classe;
+    }
+
+    function textoLimite(valor, singular, plural) {
+      if (valor === null) return 'Limite definido em contrato';
+      return valor + ' ' + (valor === 1 ? singular : plural);
+    }
+
+    function criarCartao(chave, plano, planoAtual) {
+      const cartao = document.createElement('div');
+      cartao.className = 'card';
+      cartao.style.margin = '0';
+      if (chave === planoAtual) {
+        cartao.style.border = '2px solid #2563eb';
+      }
+
+      const titulo = document.createElement('h2');
+      titulo.textContent = plano.nome;
+      cartao.appendChild(titulo);
+
+      const preco = document.createElement('p');
+      preco.innerHTML = '<strong></strong>';
+      preco.firstChild.textContent = plano.preco;
+      cartao.appendChild(preco);
+
+      [
+        textoLimite(plano.produtos, 'produto', 'produtos'),
+        textoLimite(plano.usuarios, 'usuário', 'usuários'),
+        textoLimite(plano.filiais, 'filial', 'filiais'),
+      ].forEach((texto) => {
+        const linha = document.createElement('p');
+        linha.textContent = texto;
+        cartao.appendChild(linha);
+      });
+
+      if (chave === planoAtual) {
+        const atual = document.createElement('p');
+        atual.innerHTML = '<strong>Plano atual</strong>';
+        cartao.appendChild(atual);
+      } else if (ehAdministrador) {
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = 'primario';
+        botao.textContent = 'Selecionar ' + plano.nome;
+        botao.addEventListener('click', () => selecionar(chave));
+        cartao.appendChild(botao);
+      }
+
+      return cartao;
+    }
+
+    async function carregar() {
+      const resposta = await fetch('/api/planos');
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+      if (!resposta.ok) {
+        mostrar('Não foi possível carregar os planos.', 'erro');
+        return;
+      }
+      const dados = await resposta.json();
+
+      document.getElementById('plano-atual').textContent = dados.planos[dados.planoAtual].nome;
+      document.getElementById('uso').textContent =
+        'Uso atual: ' + dados.uso.produtos + ' produto(s) e ' + dados.uso.usuarios + ' usuário(s).';
+
+      const area = document.getElementById('planos');
+      area.innerHTML = '';
+      Object.keys(dados.planos).forEach((chave) => {
+        area.appendChild(criarCartao(chave, dados.planos[chave], dados.planoAtual));
+      });
+    }
+
+    async function selecionar(chave) {
+      mostrar('', '');
+      const resposta = await fetch('/api/planos/selecionar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plano: chave }),
+      });
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+      const dados = await resposta.json();
+      if (resposta.ok) {
+        await carregar();
+        mostrar('Plano alterado para ' + dados.nome + ' com sucesso!', 'sucesso');
+      } else {
+        mostrar(dados.erro, 'erro');
+      }
+    }
+
+    fetch('/api/me')
+      .then((r) => {
+        if (r.status === 401) {
+          window.location.href = '/login.html';
+          return null;
+        }
+        return r.json();
+      })
+      .then((usuario) => {
+        if (!usuario) return;
+        ehAdministrador = usuario.perfil === 'administrador';
+        if (!ehAdministrador) {
+          document.getElementById('aviso-funcionario').style.display = 'block';
+        }
+        carregar();
+      });
+  </script>
+</body>
+</html>
