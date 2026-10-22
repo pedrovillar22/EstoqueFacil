@@ -91,6 +91,10 @@ app.get('/dashboard.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+app.get('/planos.html', exigirLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'planos.html'));
+});
+
 app.get('/usuarios.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'usuarios.html'));
 });
@@ -103,6 +107,7 @@ app.use('/api/historico', require('./rotas-historico'));
 app.use('/api/reposicao', require('./rotas-reposicao'));
 app.use('/api/dashboard', require('./rotas-dashboard'));
 app.use('/api/usuarios', require('./rotas-usuarios'));
+app.use('/api/planos', require('./rotas-planos'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
