@@ -28,8 +28,8 @@ router.post('/', exigirLoginApi, async (req, res) => {
     await cliente.query('BEGIN');
 
     const produto = await cliente.query(
-      'SELECT id, nome, quantidade, preco FROM produtos WHERE id = $1 FOR UPDATE',
-      [idProduto]
+      'SELECT id, nome, quantidade, preco FROM produtos WHERE id = $1 AND empresa_id = $2 FOR UPDATE',
+      [idProduto, req.session.usuario.empresa_id]
     );
 
     if (produto.rows.length === 0) {
@@ -52,8 +52,8 @@ router.post('/', exigirLoginApi, async (req, res) => {
     );
 
     await cliente.query(
-      'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, valor_total) VALUES ($1, $2, $3, $4, $5)',
-      [idProduto, req.session.usuario.id, 'saida', qtd, valorTotal]
+      'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, valor_total, empresa_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [idProduto, req.session.usuario.id, 'saida', qtd, valorTotal, req.session.usuario.empresa_id]
     );
 
     await cliente.query('COMMIT');

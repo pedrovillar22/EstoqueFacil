@@ -19,8 +19,10 @@ function exigirAdministrador(req, res, next) {
 router.get('/', exigirLoginApi, async (req, res) => {
   try {
     const resultado = await pool.query(
-      'SELECT id, nome, sku, categoria, quantidade, preco FROM produtos ORDER BY id DESC'
+      'SELECT id, nome, sku, categoria, quantidade, preco FROM produtos WHERE empresa_id = $1 ORDER BY id DESC',
+      [req.session.usuario.empresa_id]
     );
+
     res.json(resultado.rows);
   } catch (erro) {
     console.error(erro);
@@ -52,15 +54,16 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
     await cliente.query('BEGIN');
 
     const resultado = await cliente.query(
-      'INSERT INTO produtos (nome, sku, categoria, quantidade, preco) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, sku',
-      [nomeLimpo, skuLimpo, categoriaLimpa, qtd, valor]
+      'INSERT INTO produtos (nome, sku, categoria, quantidade, preco, empresa_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, sku',
+      [nomeLimpo, skuLimpo, categoriaLimpa, qtd, valor, req.session.usuario.empresa_id]
     );
+
     const produto = resultado.rows[0];
 
     if (qtd > 0) {
-      await cliente.query(
-        'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, observacao) VALUES ($1, $2, $3, $4, $5)',
-        [produto.id, req.session.usuario.id, 'entrada', qtd, 'Quantidade inicial do cadastro']
+           await cliente.query(
+        'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, observacao, empresa_id) VALUES ($1, $2, $3, $4, $5, $6)',
+        [produto.id, req.session.usuario.id, 'entrada', qtd, 'Quantidade inicial do cadastro', req.session.usuario.empresa_id]
       );
     }
 

@@ -11,6 +11,7 @@ function exigirLoginApi(req, res, next) {
 }
 
 router.get('/resumo', exigirLoginApi, async (req, res) => {
+  const empresa = [req.session.usuario.empresa_id];
   try {
     const [totais, baixo, vendasMes, entradasMes, maisVendidos, ultimas] =
       await Promise.all([
@@ -19,13 +20,17 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
           `SELECT COUNT(*)::int AS total_produtos,
                   COALESCE(SUM(quantidade), 0)::int AS total_unidades,
                   COALESCE(SUM(quantidade * preco), 0) AS valor_estoque
-           FROM produtos`
+           FROM produtos
+           WHERE empresa_id = $1`,
+          empresa
         ),
         // Produtos com estoque baixo (mesma regra do alerta)
         pool.query(
           `SELECT COUNT(*)::int AS total
            FROM produtos
-           WHERE quantidade <= estoque_minimo`
+           WHERE quantidade <= estoque_minimo
+             AND empresa_id = $1`,
+          empresa
         ),
         // Vendas do mês atual
         pool.query(
@@ -34,7 +39,9 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
                   COALESCE(SUM(valor_total), 0) AS faturamento
            FROM movimentacoes
            WHERE tipo = 'saida'
-             AND criado_em >= date_trunc('month', NOW())`
+             AND empresa_id = $1
+             AND criado_em >= date_trunc('month', NOW())`,
+          empresa
         ),
         // Entradas do mês atual
         pool.query(
@@ -42,7 +49,9 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
                   COALESCE(SUM(quantidade), 0)::int AS unidades_entrada
            FROM movimentacoes
            WHERE tipo = 'entrada'
-             AND criado_em >= date_trunc('month', NOW())`
+             AND empresa_id = $1
+             AND criado_em >= date_trunc('month', NOW())`,
+          empresa
         ),
         // Top 5 produtos mais vendidos (últimos 30 dias)
         pool.query(
@@ -50,18 +59,22 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
            WHERE m.tipo = 'saida'
+             AND m.empresa_id = $1
              AND m.criado_em >= NOW() - INTERVAL '30 days'
            GROUP BY p.id, p.nome
            ORDER BY vendidos DESC, p.nome ASC
-           LIMIT 5`
+           LIMIT 5`,
+          empresa
         ),
         // Últimas 5 movimentações
         pool.query(
           `SELECT m.id, m.tipo, m.quantidade, m.criado_em, p.nome AS produto
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
+           WHERE m.empresa_id = $1
            ORDER BY m.criado_em DESC, m.id DESC
-           LIMIT 5`
+           LIMIT 5`,
+          empresa
         )
       ]);
 

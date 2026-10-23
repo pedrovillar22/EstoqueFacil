@@ -37,47 +37,71 @@ function validarDados(corpo) {
   return { nome, email, senha };
 }
 
-async function criarUsuario(nome, email, senha, perfil) {
-  const existente = await pool.query('SELECT id FROM usuarios WHERE LOWER(email) = $1', [email]);
-  if (existente.rows.length > 0) {
-    return { conflito: true };
-  }
-  const hash = await bcrypt.hash(senha, 10);
-  const resultado = await pool.query(
-    'INSERT INTO usuarios (nome, email, senha_hash, perfil) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, perfil',
-    [nome, email, hash, perfil]
-  );
-  return { usuario: resultado.rows[0] };
-}
-
-// Criar conta (pública): o dono do negócio vira administrador e já entra no sistema
+// Criar conta (pública): cria uma empresa nova e o dono vira administrador dela
 router.post('/cadastro', async (req, res) => {
   const dados = validarDados(req.body);
   if (dados.erro) {
     return res.status(400).json({ erro: dados.erro });
   }
+
+  const cliente = await pool.connect();
   try {
-    const criado = await criarUsuario(dados.nome, dados.email, dados.senha, 'administrador');
-    if (criado.conflito) {
+    await cliente.query('BEGIN');
+
+    const existente = await cliente.query(
+      'SELECT id FROM usuarios WHERE LOWER(email) = $1',
+      [dados.email]
+    );
+    if (existente.rows.length > 0) {
+      await cliente.query('ROLLBACK');
       return res.status(409).json({ erro: 'Já existe uma conta com esse e-mail.' });
     }
+
+    const empresa = await cliente.query(
+      'INSERT INTO empresas (nome) VALUES ($1) RETURNING id',
+      ['Empresa de ' + dados.nome]
+    );
+    const empresaId = empresa.rows[0].id;
+
+    await cliente.query(
+      "INSERT INTO assinatura (empresa_id, plano) VALUES ($1, 'gratuito')",
+      [empresaId]
+    );
+
+    const hash = await bcrypt.hash(dados.senha, 10);
+    const usuario = await cliente.query(
+      'INSERT INTO usuarios (nome, email, senha_hash, perfil, empresa_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, perfil, empresa_id',
+      [dados.nome, dados.email, hash, 'administrador', empresaId]
+    );
+
+    await cliente.query('COMMIT');
+
+    const criado = usuario.rows[0];
     req.session.usuario = {
-      id: criado.usuario.id,
-      nome: criado.usuario.nome,
-      perfil: criado.usuario.perfil,
+      id: criado.id,
+      nome: criado.nome,
+      perfil: criado.perfil,
+      empresa_id: criado.empresa_id,
     };
-    res.status(201).json({ nome: criado.usuario.nome });
+    res.status(201).json({ nome: criado.nome });
   } catch (erro) {
+    await cliente.query('ROLLBACK');
+    if (erro.code === '23505') {
+      return res.status(409).json({ erro: 'Já existe uma conta com esse e-mail.' });
+    }
     console.error(erro);
     res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+  } finally {
+    cliente.release();
   }
 });
 
-// Lista de usuários (somente administrador)
+// Lista de usuários da própria empresa (somente administrador)
 router.get('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   try {
     const resultado = await pool.query(
-      'SELECT id, nome, email, perfil, criado_em FROM usuarios ORDER BY id DESC'
+      'SELECT id, nome, email, perfil, criado_em FROM usuarios WHERE empresa_id = $1 ORDER BY id DESC',
+      [req.session.usuario.empresa_id]
     );
     res.json(resultado.rows);
   } catch (erro) {
@@ -86,19 +110,30 @@ router.get('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   }
 });
 
-// Cadastrar funcionário (somente administrador)
+// Cadastrar funcionário na própria empresa (somente administrador)
 router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   const dados = validarDados(req.body);
   if (dados.erro) {
     return res.status(400).json({ erro: dados.erro });
   }
   try {
-    const criado = await criarUsuario(dados.nome, dados.email, dados.senha, 'funcionario');
-    if (criado.conflito) {
+    const existente = await pool.query(
+      'SELECT id FROM usuarios WHERE LOWER(email) = $1',
+      [dados.email]
+    );
+    if (existente.rows.length > 0) {
       return res.status(409).json({ erro: 'Já existe uma conta com esse e-mail.' });
     }
-    res.status(201).json(criado.usuario);
+    const hash = await bcrypt.hash(dados.senha, 10);
+    const resultado = await pool.query(
+      'INSERT INTO usuarios (nome, email, senha_hash, perfil, empresa_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, perfil',
+      [dados.nome, dados.email, hash, 'funcionario', req.session.usuario.empresa_id]
+    );
+    res.status(201).json(resultado.rows[0]);
   } catch (erro) {
+    if (erro.code === '23505') {
+      return res.status(409).json({ erro: 'Já existe uma conta com esse e-mail.' });
+    }
     console.error(erro);
     res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
   }

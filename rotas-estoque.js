@@ -28,9 +28,9 @@ router.post('/entrada', exigirLoginApi, async (req, res) => {
   try {
     await cliente.query('BEGIN');
 
-    const atualizado = await cliente.query(
-      'UPDATE produtos SET quantidade = quantidade + $1 WHERE id = $2 RETURNING id, nome, quantidade',
-      [qtd, idProduto]
+     const atualizado = await cliente.query(
+      'UPDATE produtos SET quantidade = quantidade + $1 WHERE id = $2 AND empresa_id = $3 RETURNING id, nome, quantidade',
+      [qtd, idProduto, req.session.usuario.empresa_id]
     );
 
     if (atualizado.rows.length === 0) {
@@ -39,10 +39,10 @@ router.post('/entrada', exigirLoginApi, async (req, res) => {
     }
 
     await cliente.query(
-      'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, observacao) VALUES ($1, $2, $3, $4, $5)',
-      [idProduto, req.session.usuario.id, 'entrada', qtd, obs]
+      'INSERT INTO movimentacoes (produto_id, usuario_id, tipo, quantidade, observacao, empresa_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [idProduto, req.session.usuario.id, 'entrada', qtd, obs, req.session.usuario.empresa_id]
     );
-
+    
     await cliente.query('COMMIT');
     res.status(201).json(atualizado.rows[0]);
   } catch (erro) {

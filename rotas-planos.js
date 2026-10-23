@@ -24,10 +24,10 @@ function exigirAdministrador(req, res, next) {
   next();
 }
 
-async function lerUso() {
-  const p = await pool.query('SELECT COUNT(*)::int AS total FROM produtos');
-  const u = await pool.query('SELECT COUNT(*)::int AS total FROM usuarios');
-  const a = await pool.query('SELECT plano FROM assinatura WHERE id = 1');
+async function lerUso(empresaId) {
+  const p = await pool.query('SELECT COUNT(*)::int AS total FROM produtos WHERE empresa_id = $1', [empresaId]);
+  const u = await pool.query('SELECT COUNT(*)::int AS total FROM usuarios WHERE empresa_id = $1', [empresaId]);
+  const a = await pool.query('SELECT plano FROM assinatura WHERE empresa_id = $1', [empresaId]);
   return {
     planoAtual: a.rows.length ? a.rows[0].plano : 'gratuito',
     produtos: p.rows[0].total,
@@ -35,10 +35,10 @@ async function lerUso() {
   };
 }
 
-// Lista os planos, o plano atual e o uso atual
+// Lista os planos, o plano atual e o uso atual da empresa
 router.get('/', exigirLoginApi, async (req, res) => {
   try {
-    const uso = await lerUso();
+    const uso = await lerUso(req.session.usuario.empresa_id);
     res.json({
       planos: PLANOS,
       planoAtual: uso.planoAtual,
@@ -50,7 +50,7 @@ router.get('/', exigirLoginApi, async (req, res) => {
   }
 });
 
-// Seleciona um plano (somente administrador)
+// Seleciona um plano para a empresa (somente administrador)
 router.post('/selecionar', exigirLoginApi, exigirAdministrador, async (req, res) => {
   const escolhido = req.body.plano;
   const plano = PLANOS[escolhido];
@@ -58,7 +58,7 @@ router.post('/selecionar', exigirLoginApi, exigirAdministrador, async (req, res)
     return res.status(400).json({ erro: 'Plano inválido.' });
   }
   try {
-    const uso = await lerUso();
+    const uso = await lerUso(req.session.usuario.empresa_id);
     if (plano.produtos !== null && uso.produtos > plano.produtos) {
       return res.status(409).json({ erro: `Você tem ${uso.produtos} produtos e o plano ${plano.nome} permite ${plano.produtos}.` });
     }
@@ -66,9 +66,9 @@ router.post('/selecionar', exigirLoginApi, exigirAdministrador, async (req, res)
       return res.status(409).json({ erro: `Você tem ${uso.usuarios} usuários e o plano ${plano.nome} permite ${plano.usuarios}.` });
     }
     await pool.query(
-      `INSERT INTO assinatura (id, plano, alterado_em) VALUES (1, $1, NOW())
-       ON CONFLICT (id) DO UPDATE SET plano = $1, alterado_em = NOW()`,
-      [escolhido]
+      `INSERT INTO assinatura (empresa_id, plano, alterado_em) VALUES ($2, $1, NOW())
+       ON CONFLICT (empresa_id) DO UPDATE SET plano = $1, alterado_em = NOW()`,
+      [escolhido, req.session.usuario.empresa_id]
     );
     res.json({ plano: escolhido, nome: plano.nome });
   } catch (erro) {
