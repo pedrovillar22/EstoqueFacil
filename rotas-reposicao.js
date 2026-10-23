@@ -21,9 +21,11 @@ router.get('/sugestao', exigirLoginApi, async (req, res) => {
          ON m.produto_id = p.id
         AND m.tipo = 'saida'
         AND m.criado_em >= NOW() - INTERVAL '30 days'
+       WHERE p.empresa_id = $1
        GROUP BY p.id
        HAVING GREATEST(COALESCE(SUM(m.quantidade), 0) + p.estoque_minimo - p.quantidade, 0) > 0
-       ORDER BY sugestao DESC, p.nome ASC`
+       ORDER BY sugestao DESC, p.nome ASC`,
+      [req.session.usuario.empresa_id]
     );
     res.json(resultado.rows);
   } catch (erro) {

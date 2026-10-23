@@ -16,9 +16,11 @@ router.get('/baixo', exigirLoginApi, async (req, res) => {
       `SELECT id, nome, sku, categoria, quantidade, estoque_minimo,
               (estoque_minimo - quantidade) AS faltam
        FROM produtos
-       WHERE quantidade <= estoque_minimo
-       ORDER BY quantidade ASC, nome ASC`
+       WHERE quantidade <= estoque_minimo AND empresa_id = $1
+       ORDER BY quantidade ASC, nome ASC`,
+      [req.session.usuario.empresa_id]
     );
+
     res.json(resultado.rows);
   } catch (erro) {
     console.error(erro);

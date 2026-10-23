@@ -47,7 +47,12 @@ app.post('/api/login', async (req, res) => {
     if (!senhaCorreta) {
       return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });
     }
-    req.session.usuario = { id: usuario.id, nome: usuario.nome, perfil: usuario.perfil };
+        req.session.usuario = {
+      id: usuario.id,
+      nome: usuario.nome,
+      perfil: usuario.perfil,
+      empresa_id: usuario.empresa_id,
+    };
     res.json({ nome: usuario.nome });
   } catch (erro) {
     console.error(erro);

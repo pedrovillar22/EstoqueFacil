@@ -18,11 +18,11 @@ router.get('/', exigirLoginApi, async (req, res) => {
   }
 
   try {
-    const parametros = [];
-    let filtro = '';
+    const parametros = [req.session.usuario.empresa_id];
+    let filtro = 'WHERE m.empresa_id = $1';
     if (tipo !== '') {
       parametros.push(tipo);
-      filtro = 'WHERE m.tipo = $1';
+      filtro += ' AND m.tipo = $2';
     }
 
     const resultado = await pool.query(
