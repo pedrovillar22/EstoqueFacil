@@ -77,4 +77,7 @@ router.post('/selecionar', exigirLoginApi, exigirAdministrador, async (req, res)
   }
 });
 
+router.PLANOS = PLANOS;
+router.lerUso = lerUso;
+
 module.exports = router;

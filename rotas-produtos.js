@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('./db');
+const { PLANOS, lerUso } = require('./rotas-planos');
 
 const router = express.Router();
 
@@ -47,6 +48,17 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   }
   if (Number.isNaN(valor) || valor < 0) {
     return res.status(400).json({ erro: 'Informe um preço válido (maior ou igual a zero).' });
+  }
+
+  try {
+    const uso = await lerUso(req.session.usuario.empresa_id);
+    const plano = PLANOS[uso.planoAtual];
+    if (plano.produtos !== null && uso.produtos >= plano.produtos) {
+      return res.status(403).json({ erro: `Limite do plano ${plano.nome} atingido (${plano.produtos} produtos). Faça upgrade para cadastrar mais.` });
+    }
+  } catch (erro) {
+    console.error(erro);
+    return res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
   }
 
   const cliente = await pool.connect();

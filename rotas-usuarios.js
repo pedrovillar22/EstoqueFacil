@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const pool = require('./db');
+const { PLANOS, lerUso } = require('./rotas-planos');
 
 const router = express.Router();
 
@@ -117,6 +118,11 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
     return res.status(400).json({ erro: dados.erro });
   }
   try {
+    const uso = await lerUso(req.session.usuario.empresa_id);
+    const plano = PLANOS[uso.planoAtual];
+    if (plano.usuarios !== null && uso.usuarios >= plano.usuarios) {
+      return res.status(403).json({ erro: `Limite do plano ${plano.nome} atingido (${plano.usuarios} usuário(s)). Faça upgrade para cadastrar mais.` });
+    }
     const existente = await pool.query(
       'SELECT id FROM usuarios WHERE LOWER(email) = $1',
       [dados.email]
