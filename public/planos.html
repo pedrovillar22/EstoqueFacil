@@ -17,12 +17,15 @@
       <div id="mensagem"></div>
     </div>
 
+    <div id="pagamento" class="card" style="display: none;"></div>
+
     <div id="planos" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;"></div>
 
-    <p style="margin-top: 16px;"><small>Pagamento não incluído nesta versão: a troca de plano é simulada.</small></p>
+    <p style="margin-top: 16px;"><small>Pagamento simulado: nenhuma cobrança real é feita.</small></p>
   </main>
 
   <script src="/menu.js"></script>
+  <script src="/pagamento.js"></script>
   <script>
     const mensagem = document.getElementById('mensagem');
     let ehAdministrador = false;
@@ -73,7 +76,7 @@
         botao.type = 'button';
         botao.className = 'primario';
         botao.textContent = 'Selecionar ' + plano.nome;
-        botao.addEventListener('click', () => selecionar(chave));
+        botao.addEventListener('click', () => (PLANOS_PAGOS.includes(chave) ? abrirPagamento(chave) : selecionar(chave)));
         cartao.appendChild(botao);
       }
 
