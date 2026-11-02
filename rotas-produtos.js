@@ -20,7 +20,7 @@ function exigirAdministrador(req, res, next) {
 router.get('/', exigirLoginApi, async (req, res) => {
   try {
     const resultado = await pool.query(
-      'SELECT id, nome, sku, categoria, quantidade, preco FROM produtos WHERE empresa_id = $1 ORDER BY id DESC',
+      'SELECT id, nome, sku, categoria, descricao, quantidade, preco FROM produtos WHERE empresa_id = $1 ORDER BY id DESC',
       [req.session.usuario.empresa_id]
     );
 
@@ -32,11 +32,12 @@ router.get('/', exigirLoginApi, async (req, res) => {
 });
 
 router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
-  const { nome, sku, categoria, quantidade, preco } = req.body;
+  const { nome, sku, categoria, descricao, quantidade, preco } = req.body;
 
   const nomeLimpo = (nome || '').trim();
   const skuLimpo = (sku || '').trim();
   const categoriaLimpa = (categoria || '').trim();
+  const descricaoLimpa = (descricao || '').trim();
   const qtd = quantidade === '' || quantidade == null ? NaN : Number(quantidade);
   const valor = preco === '' || preco == null ? NaN : Number(preco);
 
@@ -66,8 +67,8 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
     await cliente.query('BEGIN');
 
     const resultado = await cliente.query(
-      'INSERT INTO produtos (nome, sku, categoria, quantidade, preco, empresa_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, sku',
-      [nomeLimpo, skuLimpo, categoriaLimpa, qtd, valor, req.session.usuario.empresa_id]
+      'INSERT INTO produtos (nome, sku, categoria, descricao, quantidade, preco, empresa_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nome, sku',
+      [nomeLimpo, skuLimpo, categoriaLimpa, descricaoLimpa, qtd, valor, req.session.usuario.empresa_id]
     );
 
     const produto = resultado.rows[0];

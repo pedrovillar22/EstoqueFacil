@@ -23,6 +23,8 @@
         <input id="sku">
         <label for="categoria">Categoria</label>
         <input id="categoria">
+        <label for="descricao">Descrição</label>
+        <input id="descricao">
         <label for="quantidade">Quantidade inicial</label>
         <input id="quantidade" type="number" min="0" step="1">
         <label for="preco">Preço (R$)</label>
@@ -39,7 +41,7 @@
       <h2>Produtos cadastrados</h2>
       <table>
         <thead>
-          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Qtd</th><th>Preço</th></tr>
+          <tr><th>Nome</th><th>Descrição</th><th>SKU</th><th>Categoria</th><th>Qtd</th><th>Preço unitário</th><th>Preço total</th></tr>
         </thead>
         <tbody id="lista"></tbody>
       </table>
@@ -71,7 +73,7 @@
       lista.innerHTML = '';
       produtos.forEach((p) => {
         const linha = document.createElement('tr');
-        [p.nome, p.sku, p.categoria, p.quantidade, formatarReais(p.preco)].forEach((valor) => {
+        [p.nome, p.descricao || '-', p.sku, p.categoria, p.quantidade, formatarReais(p.preco), formatarReais(p.preco * p.quantidade)].forEach((valor) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
           linha.appendChild(celula);
@@ -102,6 +104,7 @@
           nome: document.getElementById('nome').value,
           sku: document.getElementById('sku').value,
           categoria: document.getElementById('categoria').value,
+          descricao: document.getElementById('descricao').value,
           quantidade: document.getElementById('quantidade').value,
           preco: document.getElementById('preco').value,
         }),
