@@ -62,7 +62,7 @@
 
       const dados = await resposta.json();
       if (resposta.ok) {
-        window.location.href = '/inicio.html';
+        window.location.href = '/dashboard.html';
       } else {
         mostrar(dados.erro, 'erro');
       }

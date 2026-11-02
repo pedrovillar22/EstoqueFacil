@@ -25,11 +25,7 @@ function exigirLogin(req, res, next) {
 }
 
 app.get('/', (req, res) => {
-  res.redirect(req.session.usuario ? '/inicio.html' : '/login.html');
-});
-
-app.get('/inicio.html', exigirLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'inicio.html'));
+  res.redirect(req.session.usuario ? '/dashboard.html' : '/login.html');
 });
 
 app.post('/api/login', async (req, res) => {
