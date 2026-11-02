@@ -43,7 +43,7 @@
         <div class="valor" id="valor-estoque">-</div>
       </div>
       <div class="card">
-        <div class="rotulo">Estoque baixo</div>
+        <div class="rotulo">Alertas de estoque</div>
         <div class="valor" id="estoque-baixo">-</div>
       </div>
       <div class="card">
@@ -147,6 +147,9 @@
       document.getElementById('valor-estoque').textContent = dinheiro(dados.produtos.valor_estoque);
 
       const baixo = document.getElementById('estoque-baixo');
+      const cardBaixo = baixo.closest('.card');
+      cardBaixo.style.cursor = 'pointer';
+      cardBaixo.addEventListener('click', () => { window.location.href = '/reposicao.html'; });
       baixo.textContent = dados.estoque_baixo;
       if (dados.estoque_baixo > 0) {
         baixo.classList.add('alerta');

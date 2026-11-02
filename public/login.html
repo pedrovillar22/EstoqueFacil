@@ -99,7 +99,7 @@
       });
 
       if (resposta.ok) {
-        window.location.href = '/inicio.html';
+        window.location.href = '/dashboard.html';
       } else {
         const dados = await resposta.json();
         erro.textContent = dados.erro;

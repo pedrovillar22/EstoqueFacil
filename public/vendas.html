@@ -43,6 +43,9 @@
     const mensagem = document.getElementById('mensagem');
     const lista = document.getElementById('lista');
     const selectProduto = document.getElementById('produto');
+    const botaoRegistrar = document.getElementById('registrar');
+    const campoQuantidade = document.getElementById('quantidade');
+    campoQuantidade.addEventListener('wheel', () => campoQuantidade.blur());
 
     function mostrar(texto, classe) {
       mensagem.textContent = texto;
@@ -85,6 +88,9 @@
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
+      if (botaoRegistrar.disabled) return;
+      botaoRegistrar.disabled = true;
+      const qtdEnviada = campoQuantidade.value;
       mostrar('', '');
 
       const resposta = await fetch('/api/vendas', {
@@ -102,9 +108,10 @@
       }
 
       const dados = await resposta.json();
+      botaoRegistrar.disabled = false;
       if (resposta.ok) {
         mostrar(
-          'Venda registrada! Total: ' + formatarReais(dados.valor_total) +
+          'Venda registrada! ' + qtdEnviada + ' unidade(s). Total: ' + formatarReais(dados.valor_total) +
           '. "' + dados.nome + '" agora tem ' + dados.quantidade + ' unidades.',
           'sucesso'
         );
@@ -117,7 +124,7 @@
 
     document.getElementById('cancelar').addEventListener('click', () => {
       formulario.reset();
-      window.location.href = '/inicio.html';
+      window.location.href = '/dashboard.html';
     });
 
     carregarProdutos();
