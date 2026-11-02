@@ -80,9 +80,6 @@ app.get('/vendas.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'vendas.html'));
 });
 
-app.get('/alertas.html', exigirLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'alertas.html'));
-});
 
 app.get('/historico.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'historico.html'));
