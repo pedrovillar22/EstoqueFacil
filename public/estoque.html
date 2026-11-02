@@ -45,6 +45,9 @@
     const mensagem = document.getElementById('mensagem');
     const lista = document.getElementById('lista');
     const selectProduto = document.getElementById('produto');
+    const botaoRegistrar = document.getElementById('registrar');
+    const campoQuantidade = document.getElementById('quantidade');
+    campoQuantidade.addEventListener('wheel', () => campoQuantidade.blur());
 
     function mostrar(texto, classe) {
       mensagem.textContent = texto;
@@ -83,6 +86,9 @@
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
+      if (botaoRegistrar.disabled) return;
+      botaoRegistrar.disabled = true;
+      const qtdEnviada = campoQuantidade.value;
       mostrar('', '');
 
       const resposta = await fetch('/api/estoque/entrada', {
@@ -101,8 +107,9 @@
       }
 
       const dados = await resposta.json();
+      botaoRegistrar.disabled = false;
       if (resposta.ok) {
-        mostrar('Entrada registrada! "' + dados.nome + '" agora tem ' + dados.quantidade + ' unidades.', 'sucesso');
+        mostrar('Entrada registrada! ' + qtdEnviada + ' unidade(s) de "' + dados.nome + '" agora tem ' + dados.quantidade + ' unidades.', 'sucesso');
         formulario.reset();
         carregarProdutos();
       } else {
