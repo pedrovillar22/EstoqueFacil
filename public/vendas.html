@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EstoqueFácil - Registrar Venda</title>
+  <title>EstoqueFácil - Registrar venda</title>
   <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
   <main class="container">
-    <h1>Registrar Venda</h1>
+    <h1>Registrar venda</h1>
 
     <div class="card estreito">
       <form id="formulario">
@@ -30,7 +30,7 @@
       <h2>Produtos disponíveis</h2>
       <table>
         <thead>
-          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Qtd disponível</th><th>Preço</th></tr>
+          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Quantidade disponível</th><th>Preço unitário</th></tr>
         </thead>
         <tbody id="lista"></tbody>
       </table>
@@ -71,7 +71,7 @@
       produtos.forEach((p) => {
         const opcao = document.createElement('option');
         opcao.value = p.id;
-        opcao.textContent = p.nome + ' (' + p.quantidade + ' disponíveis)';
+        opcao.textContent = p.nome + ' (' + p.quantidade + ' em estoque)';
         selectProduto.appendChild(opcao);
 
         const linha = document.createElement('tr');
@@ -111,8 +111,9 @@
       botaoRegistrar.disabled = false;
       if (resposta.ok) {
         mostrar(
-          'Venda registrada! ' + qtdEnviada + ' unidade(s). Total: ' + formatarReais(dados.valor_total) +
-          '. "' + dados.nome + '" agora tem ' + dados.quantidade + ' unidades.',
+          'Venda registrada com sucesso. Foram vendidas ' + qtdEnviada + ' unidade(s) do produto "' + dados.nome +
+          '". Valor total: ' + formatarReais(dados.valor_total) +
+          '. Estoque atual: ' + dados.quantidade + ' unidade(s).',
           'sucesso'
         );
         formulario.reset();
