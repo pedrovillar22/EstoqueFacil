@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EstoqueFácil - Registrar Entrada de Estoque</title>
+  <title>EstoqueFácil - Registrar entrada de estoque</title>
   <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
   <main class="container">
-    <h1>Registrar Entrada de Estoque</h1>
+    <h1>Registrar entrada de estoque</h1>
 
     <div class="card estreito">
       <form id="formulario">
@@ -32,7 +32,7 @@
       <h2>Estoque atual</h2>
       <table>
         <thead>
-          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Qtd atual</th></tr>
+          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Quantidade atual</th></tr>
         </thead>
         <tbody id="lista"></tbody>
       </table>
@@ -109,7 +109,7 @@
       const dados = await resposta.json();
       botaoRegistrar.disabled = false;
       if (resposta.ok) {
-        mostrar('Entrada registrada! ' + qtdEnviada + ' unidade(s) de "' + dados.nome + '" agora tem ' + dados.quantidade + ' unidades.', 'sucesso');
+        mostrar('Entrada registrada com sucesso. Foram adicionadas ' + qtdEnviada + ' unidade(s) ao produto "' + dados.nome + '". Estoque atual: ' + dados.quantidade + ' unidade(s).', 'sucesso');
         formulario.reset();
         carregarProdutos();
       } else {
