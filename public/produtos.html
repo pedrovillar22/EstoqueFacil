@@ -3,31 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EstoqueFácil - Cadastrar Produto</title>
+  <title>EstoqueFácil - Cadastrar produto</title>
   <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
   <main class="container">
-    <h1 id="titulo">Cadastrar Produto</h1>
+    <h1 id="titulo">Cadastrar produto</h1>
 
     <div class="card estreito" id="aviso-funcionario" style="display: none;">
-      <p><strong>Apenas o administrador pode cadastrar produtos.</strong></p>
-      <p>Você pode consultar a lista de produtos cadastrados logo abaixo.</p>
+      <p><strong>Apenas o administrador possui permissão para cadastrar produtos.</strong></p>
+      <p>Os produtos cadastrados podem ser consultados na lista abaixo.</p>
     </div>
 
     <div class="card estreito" id="cartao-formulario">
       <form id="formulario">
-        <label for="nome">Nome</label>
+        <label for="nome">Nome do produto</label>
         <input id="nome">
         <label for="sku">Código (SKU)</label>
         <input id="sku">
         <label for="categoria">Categoria</label>
         <input id="categoria">
-        <label for="descricao">Descrição</label>
+        <label for="descricao">Descrição (opcional)</label>
         <input id="descricao">
-        <label for="quantidade">Quantidade inicial</label>
+        <label for="quantidade">Estoque inicial</label>
         <input id="quantidade" type="number" min="0" step="1">
-        <label for="preco">Preço (R$)</label>
+        <label for="preco">Preço unitário (R$)</label>
         <input id="preco" type="number" min="0" step="0.01">
         <div class="botoes">
           <button type="submit" id="cadastrar" class="primario">Cadastrar</button>
@@ -41,7 +41,7 @@
       <h2>Produtos cadastrados</h2>
       <table>
         <thead>
-          <tr><th>Nome</th><th>Descrição</th><th>SKU</th><th>Categoria</th><th>Qtd</th><th>Preço unitário</th><th>Preço total</th></tr>
+          <tr><th>Nome</th><th>Descrição</th><th>SKU</th><th>Categoria</th><th>Quantidade</th><th>Preço unitário</th><th>Preço total</th></tr>
         </thead>
         <tbody id="lista"></tbody>
       </table>
@@ -117,7 +117,7 @@
 
       const dados = await resposta.json();
       if (resposta.ok) {
-        mostrar('Produto "' + dados.nome + '" cadastrado com sucesso!', 'sucesso');
+        mostrar('Produto "' + dados.nome + '" cadastrado com sucesso.', 'sucesso');
         formulario.reset();
         carregarLista();
       } else {
