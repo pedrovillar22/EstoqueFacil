@@ -39,7 +39,7 @@
         <div class="valor" id="total-unidades">-</div>
       </div>
       <div class="card">
-        <div class="rotulo">Valor do estoque</div>
+        <div class="rotulo">Valor total do estoque</div>
         <div class="valor" id="valor-estoque">-</div>
       </div>
       <div class="card">
@@ -62,7 +62,7 @@
 
     <div class="duas-colunas">
       <div class="card">
-        <h2>Mais vendidos (últimos 30 dias)</h2>
+        <h2>Produtos mais vendidos (últimos 30 dias)</h2>
         <table>
           <thead>
             <tr>
@@ -82,7 +82,7 @@
               <th>Data</th>
               <th>Produto</th>
               <th>Tipo</th>
-              <th>Qtd</th>
+              <th>Quantidade</th>
             </tr>
           </thead>
           <tbody id="ultimas"></tbody>
@@ -111,7 +111,7 @@
         const linha = document.createElement('tr');
         const celula = document.createElement('td');
         celula.colSpan = vazioColunas;
-        celula.textContent = 'Nenhum registro ainda.';
+        celula.textContent = 'Nenhum registro encontrado.';
         linha.appendChild(celula);
         tbody.appendChild(linha);
         return;
