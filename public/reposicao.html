@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EstoqueFácil - Sugestão de Reposição</title>
+  <title>EstoqueFácil - Sugestão de reposição</title>
   <link rel="stylesheet" href="/estilo.css">
 </head>
 <body>
   <main class="container">
-    <h1>Sugestão de Reposição</h1>
+    <h1>Sugestão de reposição</h1>
 
     <div class="card">
-      <h2>Quanto repor de cada produto</h2>
-      <p>Cálculo: vendido nos últimos 30 dias + estoque mínimo - quantidade atual.</p>
+      <h2>Quantidade sugerida para reposição por produto</h2>
+      <p>Cálculo utilizado: vendas dos últimos 30 dias + estoque mínimo - quantidade atual.</p>
       <div id="mensagem"></div>
       <table>
         <thead>
@@ -20,9 +20,9 @@
             <th>Nome</th>
             <th>SKU</th>
             <th>Categoria</th>
-            <th>Qtd atual</th>
+            <th>Quantidade atual</th>
             <th>Estoque mínimo</th>
-            <th>Vendido (30 dias)</th>
+            <th>Vendas nos últimos 30 dias</th>
             <th>Sugestão de reposição</th>
           </tr>
         </thead>
@@ -57,11 +57,11 @@
       lista.innerHTML = '';
 
       if (dados.length === 0) {
-        mostrar('Nenhum produto precisa de reposição no momento.', 'sucesso');
+        mostrar('Nenhum produto necessita de reposição no momento.', 'sucesso');
         return;
       }
 
-      mostrar(dados.length + ' produto(s) com sugestão de reposição. Faça uma entrada de estoque para repor.', 'erro');
+      mostrar(dados.length + ' produto(s) com sugestão de reposição. Registre uma entrada de estoque para realizar a reposição.', 'erro');
 
       dados.forEach((p) => {
         const linha = document.createElement('tr');
