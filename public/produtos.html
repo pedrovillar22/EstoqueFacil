@@ -6,7 +6,7 @@
   <title>EstoqueFácil - Cadastrar produto</title>
   <link rel="stylesheet" href="/estilo.css">
   <style>
-    .container { max-width: 1100px; width: 100%; }
+    .container { max-width: 1250px; width: 100%; }
     .grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 20px; }
     .grade .dois { grid-column: span 2; }
     .grade .largo { grid-column: 1 / -1; }
@@ -16,6 +16,7 @@
     }
     .campo-erro { border-color: #c0392b !important; background: #fdf2f2; }
     .erro-campo { color: #c0392b; font-size: 13px; margin: 4px 0 0; }
+    td.sem-quebra { white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -86,12 +87,49 @@
       </form>
     </div>
 
+    <div class="card" id="cartao-edicao" style="display: none;">
+      <h2 id="titulo-edicao">Editar produto</h2>
+      <form id="formulario-edicao" novalidate>
+        <div class="grade">
+          <div>
+            <label for="ed_estoque_minimo">Estoque mínimo (gera alerta)</label>
+            <input id="ed_estoque_minimo" type="number" min="0" step="1">
+          </div>
+          <div>
+            <label for="ed_unidade_medida">Unidade de medida</label>
+            <select id="ed_unidade_medida">
+              <option value="un">Unidade (un)</option>
+              <option value="kg">Quilograma (kg)</option>
+              <option value="g">Grama (g)</option>
+              <option value="L">Litro (L)</option>
+              <option value="ml">Mililitro (ml)</option>
+              <option value="caixa">Caixa</option>
+              <option value="pacote">Pacote</option>
+              <option value="m">Metro (m)</option>
+            </select>
+          </div>
+          <div>
+            <label for="ed_codigo_barras">Código de barras (opcional)</label>
+            <input id="ed_codigo_barras" maxlength="50" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="largo">
+            <div class="botoes">
+              <button type="submit" id="salvar-edicao" class="primario">Salvar alterações</button>
+              <button type="button" id="cancelar-edicao" class="secundario">Cancelar</button>
+            </div>
+            <div id="mensagem-edicao"></div>
+          </div>
+        </div>
+      </form>
+    </div>
+
     <div class="card">
       <h2>Produtos cadastrados</h2>
+      <div id="mensagem-lista"></div>
       <div style="overflow-x: auto;">
         <table>
           <thead>
-            <tr><th>Nome</th><th>Descrição</th><th>SKU</th><th>Código de barras</th><th>Categoria</th><th>Quantidade</th><th>Estoque mínimo</th><th>Preço unitário</th><th>Preço total</th></tr>
+            <tr><th>Nome</th><th>Descrição</th><th>SKU</th><th>Código de barras</th><th>Categoria</th><th>Quantidade</th><th>Estoque mínimo</th><th>Preço unitário</th><th>Preço total</th><th id="th-acoes" style="display: none;">Ações</th></tr>
           </thead>
           <tbody id="lista"></tbody>
         </table>
@@ -102,8 +140,15 @@
   <script src="/menu.js"></script>
   <script>
     const formulario = document.getElementById('formulario');
+    const formularioEdicao = document.getElementById('formulario-edicao');
     const mensagem = document.getElementById('mensagem');
+    const mensagemEdicao = document.getElementById('mensagem-edicao');
+    const mensagemLista = document.getElementById('mensagem-lista');
+    const cartaoEdicao = document.getElementById('cartao-edicao');
     const lista = document.getElementById('lista');
+
+    let ehAdministrador = false;
+    let produtoEmEdicao = null;
 
     // Regras de validação: mensagem exibida logo abaixo de cada campo
     const REGRAS = [
@@ -130,9 +175,18 @@
       },
     ];
 
+    const REGRAS_EDICAO = [
+      {
+        id: 'ed_estoque_minimo',
+        vazio: 'Informe o estoque mínimo.',
+        invalido: (v) => !Number.isInteger(Number(v)) || Number(v) < 0,
+        mensagemInvalido: 'O estoque mínimo deve ser um número inteiro maior ou igual a zero.',
+      },
+    ];
+
     function limparErro(campo) {
       campo.classList.remove('campo-erro');
-      const aviso = formulario.querySelector('.erro-campo[data-para="' + campo.id + '"]');
+      const aviso = document.querySelector('.erro-campo[data-para="' + campo.id + '"]');
       if (aviso) aviso.remove();
     }
 
@@ -146,9 +200,9 @@
       campo.insertAdjacentElement('afterend', aviso);
     }
 
-    function validarFormulario() {
+    function validar(regras) {
       let primeiro = null;
-      REGRAS.forEach((regra) => {
+      regras.forEach((regra) => {
         const campo = document.getElementById(regra.id);
         limparErro(campo);
         const valor = campo.value.trim();
@@ -172,7 +226,7 @@
     }
 
     // O erro some assim que a pessoa volta a digitar no campo
-    REGRAS.forEach((regra) => {
+    REGRAS.concat(REGRAS_EDICAO).forEach((regra) => {
       const campo = document.getElementById(regra.id);
       campo.addEventListener('input', () => limparErro(campo));
     });
@@ -185,14 +239,51 @@
         document.getElementById('unidade_medida').focus();
       }
     });
+    document.getElementById('ed_codigo_barras').addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter') {
+        evento.preventDefault();
+        document.getElementById('salvar-edicao').focus();
+      }
+    });
 
-    function mostrar(texto, classe) {
-      mensagem.textContent = texto;
-      mensagem.className = classe;
+    // Exibe a mensagem; fora do formulário principal, aplica o visual de caixa colorida
+    function exibir(elemento, texto, classe) {
+      elemento.textContent = texto;
+      elemento.className = classe;
+      if (elemento.id === 'mensagem') return;
+      if (!texto) {
+        elemento.style.cssText = '';
+        return;
+      }
+      const ok = classe === 'sucesso';
+      elemento.style.cssText =
+        'padding: 12px 14px; border-radius: 6px; font-size: 14px; margin: 12px 0; ' +
+        'background: ' + (ok ? '#dcfce7' : '#fee2e2') + '; ' +
+        'color: ' + (ok ? '#166534' : '#991b1b') + ';';
     }
 
     function formatarReais(valor) {
       return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
+    }
+
+    function abrirEdicao(produto) {
+      produtoEmEdicao = produto;
+      document.getElementById('titulo-edicao').textContent = 'Editar produto: ' + produto.nome;
+      document.getElementById('ed_estoque_minimo').value = produto.estoque_minimo;
+      document.getElementById('ed_unidade_medida').value = produto.unidade_medida;
+      document.getElementById('ed_codigo_barras').value = produto.codigo_barras || '';
+      REGRAS_EDICAO.forEach((regra) => limparErro(document.getElementById(regra.id)));
+      exibir(mensagemEdicao, '', '');
+      exibir(mensagemLista, '', '');
+      cartaoEdicao.style.display = 'block';
+      cartaoEdicao.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('ed_estoque_minimo').focus({ preventScroll: true });
+    }
+
+    function fecharEdicao() {
+      produtoEmEdicao = null;
+      cartaoEdicao.style.display = 'none';
+      formularioEdicao.reset();
     }
 
     async function carregarLista() {
@@ -215,32 +306,52 @@
           p.estoque_minimo + ' ' + p.unidade_medida,
           formatarReais(p.preco),
           formatarReais(p.preco * p.quantidade),
-        ].forEach((valor) => {
+        ].forEach((valor, posicao) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
+          if ([3, 5, 6, 7, 8].includes(posicao)) celula.className = 'sem-quebra';
           linha.appendChild(celula);
         });
+
+        if (ehAdministrador) {
+          const celula = document.createElement('td');
+          celula.className = 'sem-quebra';
+          const botao = document.createElement('button');
+          botao.type = 'button';
+          botao.className = 'secundario';
+          botao.style.cssText = 'padding: 6px 12px; width: auto; margin: 0;';
+          botao.textContent = 'Editar';
+          botao.addEventListener('click', () => abrirEdicao(p));
+          celula.appendChild(botao);
+          linha.appendChild(celula);
+        }
+
         lista.appendChild(linha);
       });
     }
 
-    // Funcionário não vê o formulário: aparece um aviso no lugar
+    // Funcionário não vê o formulário nem o botão Editar: aparece um aviso no lugar
     fetch('/api/me')
       .then((r) => r.json())
       .then((usuario) => {
-        if (usuario.perfil && usuario.perfil !== 'administrador') {
+        ehAdministrador = usuario.perfil === 'administrador';
+        if (ehAdministrador) {
+          document.getElementById('th-acoes').style.display = '';
+        } else {
           document.getElementById('cartao-formulario').style.display = 'none';
           document.getElementById('aviso-funcionario').style.display = 'block';
           document.getElementById('titulo').textContent = 'Produtos';
         }
-      });
+        carregarLista();
+      })
+      .catch(() => carregarLista());
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
-      mostrar('', '');
+      exibir(mensagem, '', '');
 
-      if (!validarFormulario()) {
-        mostrar('Preencha os campos destacados para continuar.', 'erro');
+      if (!validar(REGRAS)) {
+        exibir(mensagem, 'Preencha os campos destacados para continuar.', 'erro');
         return;
       }
 
@@ -267,20 +378,52 @@
 
       const dados = await resposta.json();
       if (resposta.ok) {
-        mostrar('Produto "' + dados.nome + '" cadastrado com sucesso.', 'sucesso');
+        exibir(mensagem, 'Produto "' + dados.nome + '" cadastrado com sucesso.', 'sucesso');
         formulario.reset();
         carregarLista();
       } else {
-        mostrar(dados.erro, 'erro');
+        exibir(mensagem, dados.erro, 'erro');
       }
     });
+
+    formularioEdicao.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      exibir(mensagemEdicao, '', '');
+
+      if (!produtoEmEdicao) return;
+      if (!validar(REGRAS_EDICAO)) return;
+
+      const resposta = await fetch('/api/produtos/' + produtoEmEdicao.id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          estoque_minimo: document.getElementById('ed_estoque_minimo').value,
+          unidade_medida: document.getElementById('ed_unidade_medida').value,
+          codigo_barras: document.getElementById('ed_codigo_barras').value,
+        }),
+      });
+
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+      if (resposta.ok) {
+        fecharEdicao();
+        exibir(mensagemLista, 'Produto "' + dados.nome + '" atualizado com sucesso.', 'sucesso');
+        carregarLista();
+      } else {
+        exibir(mensagemEdicao, dados.erro, 'erro');
+      }
+    });
+
+    document.getElementById('cancelar-edicao').addEventListener('click', fecharEdicao);
 
     document.getElementById('cancelar').addEventListener('click', () => {
       formulario.reset();
       window.location.href = '/dashboard.html';
     });
-
-    carregarLista();
   </script>
 </body>
 </html>

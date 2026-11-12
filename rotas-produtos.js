@@ -118,4 +118,48 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   }
 });
 
+router.put('/:id', exigirLoginApi, exigirAdministrador, async (req, res) => {
+  const id = Number(req.params.id);
+  const { estoque_minimo, unidade_medida, codigo_barras } = req.body;
+
+  const unidade = (unidade_medida || '').trim();
+  const codigoBarrasLimpo = (codigo_barras || '').trim() || null;
+  const minimo = estoque_minimo === '' || estoque_minimo == null ? NaN : Number(estoque_minimo);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ erro: 'Produto inválido.' });
+  }
+  if (!Number.isInteger(minimo) || minimo < 0) {
+    return res.status(400).json({ erro: 'O estoque mínimo deve ser um número inteiro maior ou igual a zero.' });
+  }
+  if (!UNIDADES_VALIDAS.includes(unidade)) {
+    return res.status(400).json({ erro: 'Selecione uma unidade de medida válida.' });
+  }
+  if (codigoBarrasLimpo && codigoBarrasLimpo.length > 50) {
+    return res.status(400).json({ erro: 'O código de barras deve ter no máximo 50 caracteres.' });
+  }
+
+  try {
+    const resultado = await pool.query(
+      `UPDATE produtos
+       SET estoque_minimo = $1, unidade_medida = $2, codigo_barras = $3
+       WHERE id = $4 AND empresa_id = $5
+       RETURNING id, nome`,
+      [minimo, unidade, codigoBarrasLimpo, id, req.session.usuario.empresa_id]
+    );
+
+    if (resultado.rowCount === 0) {
+      return res.status(404).json({ erro: 'Produto não encontrado.' });
+    }
+
+    res.json(resultado.rows[0]);
+  } catch (erro) {
+    if (erro.code === '23505') {
+      return res.status(409).json({ erro: 'Já existe um produto cadastrado com esse código de barras.' });
+    }
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+  }
+});
+
 module.exports = router;
