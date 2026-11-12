@@ -12,6 +12,10 @@
 
     <div class="card estreito">
       <form id="formulario">
+        <label for="codigo_barras">Código de barras (opcional)</label>
+        <input id="codigo_barras" maxlength="50" inputmode="numeric" autocomplete="off" placeholder="Leia o código com o leitor ou digite e pressione Enter">
+        <div id="aviso-codigo" style="font-size: 13px; margin: 4px 0 8px; min-height: 18px;"></div>
+
         <label for="produto">Produto</label>
         <select id="produto">
           <option value="">Selecione um produto</option>
@@ -30,7 +34,7 @@
       <h2>Produtos disponíveis</h2>
       <table>
         <thead>
-          <tr><th>Nome</th><th>SKU</th><th>Categoria</th><th>Quantidade disponível</th><th>Preço unitário</th></tr>
+          <tr><th>Nome</th><th>SKU</th><th>Código de barras</th><th>Categoria</th><th>Quantidade disponível</th><th>Preço unitário</th></tr>
         </thead>
         <tbody id="lista"></tbody>
       </table>
@@ -45,16 +49,68 @@
     const selectProduto = document.getElementById('produto');
     const botaoRegistrar = document.getElementById('registrar');
     const campoQuantidade = document.getElementById('quantidade');
+    const campoCodigo = document.getElementById('codigo_barras');
+    const avisoCodigo = document.getElementById('aviso-codigo');
     campoQuantidade.addEventListener('wheel', () => campoQuantidade.blur());
+
+    let produtos = [];
 
     function mostrar(texto, classe) {
       mensagem.textContent = texto;
       mensagem.className = classe;
     }
 
+    function avisarCodigo(texto, cor) {
+      avisoCodigo.textContent = texto;
+      avisoCodigo.style.color = cor || '#64748b';
+    }
+
     function formatarReais(valor) {
       return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
     }
+
+    function produtoDoCodigo(codigo) {
+      return produtos.find((p) => p.codigo_barras === codigo)
+        || produtos.find((p) => p.sku.toLowerCase() === codigo.toLowerCase());
+    }
+
+    function buscarPorCodigo() {
+      const codigo = campoCodigo.value.trim();
+      if (!codigo) return;
+
+      const produto = produtoDoCodigo(codigo);
+
+      if (!produto) {
+        avisarCodigo('Nenhum produto encontrado com o código "' + codigo + '".', '#c0392b');
+        campoCodigo.select();
+        return;
+      }
+
+      selectProduto.value = produto.id;
+      avisarCodigo('Produto selecionado pelo código: ' + produto.nome + '.', '#15803d');
+      campoQuantidade.focus();
+    }
+
+    // O leitor de código de barras envia Enter ao final da leitura
+    campoCodigo.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter') {
+        evento.preventDefault();
+        buscarPorCodigo();
+      }
+    });
+
+    campoCodigo.addEventListener('input', () => avisarCodigo(''));
+
+    // Se o produto for trocado manualmente e o código digitado não for dele, o código é limpo
+    selectProduto.addEventListener('change', () => {
+      const codigo = campoCodigo.value.trim();
+      if (!codigo) return;
+      const produto = produtoDoCodigo(codigo);
+      if (!produto || String(produto.id) !== selectProduto.value) {
+        campoCodigo.value = '';
+        avisarCodigo('O código de barras foi limpo porque o produto foi alterado manualmente.', '#b45309');
+      }
+    });
 
     async function carregarProdutos() {
       const resposta = await fetch('/api/produtos');
@@ -62,7 +118,7 @@
         window.location.href = '/login.html';
         return;
       }
-      const produtos = await resposta.json();
+      produtos = await resposta.json();
 
       const escolhido = selectProduto.value;
       selectProduto.innerHTML = '<option value="">Selecione um produto</option>';
@@ -71,11 +127,11 @@
       produtos.forEach((p) => {
         const opcao = document.createElement('option');
         opcao.value = p.id;
-        opcao.textContent = p.nome + ' (' + p.quantidade + ' em estoque)';
+        opcao.textContent = p.nome + ' (' + p.quantidade + ' ' + p.unidade_medida + ' em estoque)';
         selectProduto.appendChild(opcao);
 
         const linha = document.createElement('tr');
-        [p.nome, p.sku, p.categoria, p.quantidade, formatarReais(p.preco)].forEach((valor) => {
+        [p.nome, p.sku, p.codigo_barras || '-', p.categoria, p.quantidade + ' ' + p.unidade_medida, formatarReais(p.preco)].forEach((valor) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
           linha.appendChild(celula);
@@ -88,10 +144,31 @@
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
+      mostrar('', '');
+
+      // Confere se o código de barras digitado corresponde ao produto selecionado
+      const codigo = campoCodigo.value.trim();
+      if (codigo) {
+        const produtoCodigo = produtoDoCodigo(codigo);
+        if (!produtoCodigo) {
+          mostrar('Nenhum produto foi encontrado com o código informado. Corrija ou limpe o campo de código de barras.', 'erro');
+          campoCodigo.focus();
+          return;
+        }
+        if (!selectProduto.value) {
+          selectProduto.value = produtoCodigo.id;
+        } else if (String(produtoCodigo.id) !== selectProduto.value) {
+          mostrar('O código de barras informado pertence ao produto "' + produtoCodigo.nome + '", mas o produto selecionado é outro. Corrija o código ou limpe o campo.', 'erro');
+          campoCodigo.focus();
+          return;
+        }
+      }
+
       if (botaoRegistrar.disabled) return;
       botaoRegistrar.disabled = true;
       const qtdEnviada = campoQuantidade.value;
-      mostrar('', '');
+      const vendido = produtos.find((p) => String(p.id) === selectProduto.value);
+      const unidade = vendido ? vendido.unidade_medida : 'un';
 
       const resposta = await fetch('/api/vendas', {
         method: 'POST',
@@ -111,13 +188,15 @@
       botaoRegistrar.disabled = false;
       if (resposta.ok) {
         mostrar(
-          'Venda registrada com sucesso. Foram vendidas ' + qtdEnviada + ' unidade(s) do produto "' + dados.nome +
+          'Venda registrada com sucesso. Foram vendidos ' + qtdEnviada + ' ' + unidade + ' do produto "' + dados.nome +
           '". Valor total: ' + formatarReais(dados.valor_total) +
-          '. Estoque atual: ' + dados.quantidade + ' unidade(s).',
+          '. Estoque atual: ' + dados.quantidade + ' ' + unidade + '.',
           'sucesso'
         );
         formulario.reset();
-        carregarProdutos();
+        avisarCodigo('');
+        await carregarProdutos();
+        campoCodigo.focus();
       } else {
         mostrar(dados.erro, 'erro');
       }
