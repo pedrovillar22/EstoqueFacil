@@ -11,7 +11,10 @@
     @media (max-width: 800px) {
       .filtros { grid-template-columns: 1fr; }
     }
-    .resumo-filtro { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 12px; font-size: 14px; color: #64748b; }
+    .atalhos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 0; }
+    .atalhos span { font-size: 14px; color: #64748b; margin-right: 4px; }
+    .atalhos button { width: auto; margin: 0; padding: 6px 12px; }
+    .resumo-filtro { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; font-size: 14px; color: #64748b; }
     td.sem-quebra { white-space: nowrap; }
   </style>
 </head>
@@ -41,6 +44,14 @@
           <label for="data-final">Data final</label>
           <input id="data-final" type="date">
         </div>
+      </div>
+
+      <div class="atalhos">
+        <span>Período rápido:</span>
+        <button type="button" class="secundario" data-atalho="hoje">Hoje</button>
+        <button type="button" class="secundario" data-atalho="7dias">Últimos 7 dias</button>
+        <button type="button" class="secundario" data-atalho="mes">Este mês</button>
+        <button type="button" class="secundario" data-atalho="mesanterior">Mês anterior</button>
       </div>
 
       <div class="resumo-filtro">
@@ -78,6 +89,7 @@
     const selectTipo = document.getElementById('tipo');
     const dataInicial = document.getElementById('data-inicial');
     const dataFinal = document.getElementById('data-final');
+    const botoesAtalho = document.querySelectorAll('[data-atalho]');
 
     let movimentacoes = [];
 
@@ -94,6 +106,37 @@
     // Ignora acentos e diferença entre maiúsculas e minúsculas na pesquisa
     function normalizar(texto) {
       return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
+    // Converte uma data para o formato do campo de data (AAAA-MM-DD), no fuso do computador
+    function paraCampo(data) {
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return data.getFullYear() + '-' + mes + '-' + dia;
+    }
+
+    function periodoDoAtalho(atalho) {
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = hoje.getMonth();
+
+      if (atalho === 'hoje') {
+        return [hoje, hoje];
+      }
+      if (atalho === '7dias') {
+        return [new Date(ano, mes, hoje.getDate() - 6), hoje];
+      }
+      if (atalho === 'mes') {
+        return [new Date(ano, mes, 1), new Date(ano, mes + 1, 0)];
+      }
+      // mês anterior: do dia 1 ao último dia do mês passado
+      return [new Date(ano, mes - 1, 1), new Date(ano, mes, 0)];
+    }
+
+    function marcarAtalho(atalho) {
+      botoesAtalho.forEach((botao) => {
+        botao.className = botao.dataset.atalho === atalho ? 'primario' : 'secundario';
+      });
     }
 
     function filtrar() {
@@ -178,8 +221,25 @@
       desenhar();
     }
 
-    [campoBusca, selectTipo, dataInicial, dataFinal].forEach((campo) => {
-      campo.addEventListener(campo === campoBusca ? 'input' : 'change', desenhar);
+    campoBusca.addEventListener('input', desenhar);
+    selectTipo.addEventListener('change', desenhar);
+
+    // Ao mexer nas datas manualmente, o destaque do atalho some
+    [dataInicial, dataFinal].forEach((campo) => {
+      campo.addEventListener('change', () => {
+        marcarAtalho(null);
+        desenhar();
+      });
+    });
+
+    botoesAtalho.forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const [inicio, fim] = periodoDoAtalho(botao.dataset.atalho);
+        dataInicial.value = paraCampo(inicio);
+        dataFinal.value = paraCampo(fim);
+        marcarAtalho(botao.dataset.atalho);
+        desenhar();
+      });
     });
 
     document.getElementById('limpar').addEventListener('click', () => {
@@ -187,6 +247,7 @@
       selectTipo.value = '';
       dataInicial.value = '';
       dataFinal.value = '';
+      marcarAtalho(null);
       desenhar();
       campoBusca.focus();
     });
