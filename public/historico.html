@@ -3,36 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EstoqueFácil - Histórico de Movimentações</title>
+  <title>EstoqueFácil - Histórico de movimentações</title>
   <link rel="stylesheet" href="/estilo.css">
+  <style>
+    .container { max-width: 1250px; width: 100%; }
+    .filtros { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0 16px; }
+    @media (max-width: 800px) {
+      .filtros { grid-template-columns: 1fr; }
+    }
+    .atalhos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 0; }
+    .atalhos span { font-size: 14px; color: #64748b; margin-right: 4px; }
+    .atalhos button { width: auto; margin: 0; padding: 6px 12px; }
+    .resumo-filtro { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; font-size: 14px; color: #64748b; }
+    td.sem-quebra { white-space: nowrap; }
+  </style>
 </head>
 <body>
   <main class="container">
-    <h1>Histórico de Movimentações</h1>
+    <h1>Histórico de movimentações</h1>
 
     <div class="card">
-      <label for="tipo">Filtrar por tipo</label>
-      <select id="tipo">
-        <option value="">Todas</option>
-        <option value="entrada">Entradas</option>
-        <option value="saida">Vendas</option>
-      </select>
+      <div class="filtros">
+        <div>
+          <label for="busca">Pesquisar</label>
+          <input id="busca" autocomplete="off" placeholder="Produto, SKU, usuário ou observação">
+        </div>
+        <div>
+          <label for="tipo">Tipo</label>
+          <select id="tipo">
+            <option value="">Todos os tipos</option>
+            <option value="entrada">Entradas</option>
+            <option value="saida">Vendas</option>
+          </select>
+        </div>
+        <div>
+          <label for="data-inicial">Data inicial</label>
+          <input id="data-inicial" type="date">
+        </div>
+        <div>
+          <label for="data-final">Data final</label>
+          <input id="data-final" type="date">
+        </div>
+      </div>
+
+      <div class="atalhos">
+        <span>Período rápido:</span>
+        <button type="button" class="secundario" data-atalho="hoje">Hoje</button>
+        <button type="button" class="secundario" data-atalho="7dias">Últimos 7 dias</button>
+        <button type="button" class="secundario" data-atalho="mes">Este mês</button>
+        <button type="button" class="secundario" data-atalho="mesanterior">Mês anterior</button>
+      </div>
+
+      <div class="resumo-filtro">
+        <span id="contador"></span>
+        <button type="button" id="limpar" class="secundario" style="width: auto; margin: 0; padding: 6px 12px;">Limpar filtros</button>
+      </div>
+
       <div id="mensagem"></div>
-      <table>
-        <thead>
-          <tr>
-            <th>Data e hora</th>
-            <th>Produto</th>
-            <th>SKU</th>
-            <th>Tipo</th>
-            <th>Qtd</th>
-            <th>Valor total</th>
-            <th>Usuário</th>
-            <th>Observação</th>
-          </tr>
-        </thead>
-        <tbody id="lista"></tbody>
-      </table>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Data e hora</th>
+              <th>Produto</th>
+              <th>SKU</th>
+              <th>Tipo</th>
+              <th>Quantidade</th>
+              <th>Valor total</th>
+              <th>Usuário</th>
+              <th>Observação</th>
+            </tr>
+          </thead>
+          <tbody id="lista"></tbody>
+        </table>
+      </div>
     </div>
   </main>
 
@@ -40,7 +84,14 @@
   <script>
     const mensagem = document.getElementById('mensagem');
     const lista = document.getElementById('lista');
+    const contador = document.getElementById('contador');
+    const campoBusca = document.getElementById('busca');
     const selectTipo = document.getElementById('tipo');
+    const dataInicial = document.getElementById('data-inicial');
+    const dataFinal = document.getElementById('data-final');
+    const botoesAtalho = document.querySelectorAll('[data-atalho]');
+
+    let movimentacoes = [];
 
     function mostrar(texto, classe) {
       mensagem.textContent = texto;
@@ -52,29 +103,85 @@
       return 'R$ ' + Number(valor).toFixed(2).replace('.', ',');
     }
 
-    async function carregarHistorico() {
-      const resposta = await fetch('/api/historico?tipo=' + encodeURIComponent(selectTipo.value));
-      if (resposta.status === 401) {
-        window.location.href = '/login.html';
-        return;
+    // Ignora acentos e diferença entre maiúsculas e minúsculas na pesquisa
+    function normalizar(texto) {
+      return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
+    // Converte uma data para o formato do campo de data (AAAA-MM-DD), no fuso do computador
+    function paraCampo(data) {
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return data.getFullYear() + '-' + mes + '-' + dia;
+    }
+
+    function periodoDoAtalho(atalho) {
+      const hoje = new Date();
+      const ano = hoje.getFullYear();
+      const mes = hoje.getMonth();
+
+      if (atalho === 'hoje') {
+        return [hoje, hoje];
       }
-
-      const dados = await resposta.json();
-      lista.innerHTML = '';
-
-      if (!resposta.ok) {
-        mostrar(dados.erro, 'erro');
-        return;
+      if (atalho === '7dias') {
+        return [new Date(ano, mes, hoje.getDate() - 6), hoje];
       }
-
-      if (dados.length === 0) {
-        mostrar('Nenhuma movimentação registrada.', 'sucesso');
-        return;
+      if (atalho === 'mes') {
+        return [new Date(ano, mes, 1), new Date(ano, mes + 1, 0)];
       }
+      // mês anterior: do dia 1 ao último dia do mês passado
+      return [new Date(ano, mes - 1, 1), new Date(ano, mes, 0)];
+    }
 
+    function marcarAtalho(atalho) {
+      botoesAtalho.forEach((botao) => {
+        botao.className = botao.dataset.atalho === atalho ? 'primario' : 'secundario';
+      });
+    }
+
+    function filtrar() {
+      const termo = normalizar(campoBusca.value.trim());
+      const tipo = selectTipo.value;
+      const inicio = dataInicial.value ? new Date(dataInicial.value + 'T00:00:00') : null;
+      const fim = dataFinal.value ? new Date(dataFinal.value + 'T23:59:59.999') : null;
+
+      if (inicio && fim && inicio > fim) {
+        mostrar('A data inicial não pode ser posterior à data final.', 'erro');
+        return [];
+      }
       mostrar('', '');
 
-      dados.forEach((m) => {
+      return movimentacoes.filter((m) => {
+        if (tipo && m.tipo !== tipo) return false;
+        const data = new Date(m.criado_em);
+        if (inicio && data < inicio) return false;
+        if (fim && data > fim) return false;
+        if (termo) {
+          const texto = normalizar([m.produto, m.sku, m.usuario, m.observacao].join(' '));
+          if (!texto.includes(termo)) return false;
+        }
+        return true;
+      });
+    }
+
+    function desenhar() {
+      const filtradas = filtrar();
+      lista.innerHTML = '';
+      contador.textContent = filtradas.length + ' de ' + movimentacoes.length + ' movimentação(ões)';
+
+      if (filtradas.length === 0) {
+        const linha = document.createElement('tr');
+        const celula = document.createElement('td');
+        celula.colSpan = 8;
+        celula.textContent = movimentacoes.length === 0
+          ? 'Nenhuma movimentação registrada.'
+          : 'Nenhuma movimentação encontrada para os filtros informados.';
+        linha.appendChild(celula);
+        lista.appendChild(linha);
+        return;
+      }
+
+      filtradas.forEach((m) => {
         const linha = document.createElement('tr');
         [
           new Date(m.criado_em).toLocaleString('pt-BR'),
@@ -85,16 +192,66 @@
           formatarValor(m.valor_total),
           m.usuario,
           m.observacao || '-',
-        ].forEach((valor) => {
+        ].forEach((valor, posicao) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
+          if ([0, 3, 4, 5].includes(posicao)) celula.className = 'sem-quebra';
           linha.appendChild(celula);
         });
         lista.appendChild(linha);
       });
     }
 
-    selectTipo.addEventListener('change', carregarHistorico);
+    async function carregarHistorico() {
+      const resposta = await fetch('/api/historico?tipo=');
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+
+      if (!resposta.ok) {
+        lista.innerHTML = '';
+        mostrar(dados.erro, 'erro');
+        return;
+      }
+
+      movimentacoes = dados;
+      desenhar();
+    }
+
+    campoBusca.addEventListener('input', desenhar);
+    selectTipo.addEventListener('change', desenhar);
+
+    // Ao mexer nas datas manualmente, o destaque do atalho some
+    [dataInicial, dataFinal].forEach((campo) => {
+      campo.addEventListener('change', () => {
+        marcarAtalho(null);
+        desenhar();
+      });
+    });
+
+    botoesAtalho.forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const [inicio, fim] = periodoDoAtalho(botao.dataset.atalho);
+        dataInicial.value = paraCampo(inicio);
+        dataFinal.value = paraCampo(fim);
+        marcarAtalho(botao.dataset.atalho);
+        desenhar();
+      });
+    });
+
+    document.getElementById('limpar').addEventListener('click', () => {
+      campoBusca.value = '';
+      selectTipo.value = '';
+      dataInicial.value = '';
+      dataFinal.value = '';
+      marcarAtalho(null);
+      desenhar();
+      campoBusca.focus();
+    });
+
     carregarHistorico();
   </script>
 </body>

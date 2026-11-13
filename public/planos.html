@@ -13,7 +13,7 @@
     <div class="card">
       <h2>Seu plano atual: <span id="plano-atual"></span></h2>
       <p id="uso"></p>
-      <p id="aviso-funcionario" style="display: none;"><strong>Apenas o administrador pode alterar o plano.</strong></p>
+      <p id="aviso-funcionario" style="display: none;"><strong>Apenas o administrador possui permissão para alterar o plano.</strong></p>
       <div id="mensagem"></div>
     </div>
 
@@ -21,7 +21,7 @@
 
     <div id="planos" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;"></div>
 
-    <p style="margin-top: 16px;"><small>Pagamento simulado: nenhuma cobrança real é feita.</small></p>
+    <p style="margin-top: 16px;"><small>Pagamento simulado: nenhuma cobrança real será efetuada.</small></p>
   </main>
 
   <script src="/menu.js"></script>
@@ -97,7 +97,7 @@
 
       document.getElementById('plano-atual').textContent = dados.planos[dados.planoAtual].nome;
       document.getElementById('uso').textContent =
-        'Uso atual: ' + dados.uso.produtos + ' produto(s) e ' + dados.uso.usuarios + ' usuário(s).';
+        'Utilização atual: ' + dados.uso.produtos + ' produto(s) e ' + dados.uso.usuarios + ' usuário(s).';
 
       const area = document.getElementById('planos');
       area.innerHTML = '';
@@ -120,7 +120,7 @@
       const dados = await resposta.json();
       if (resposta.ok) {
         await carregar();
-        mostrar('Plano alterado para ' + dados.nome + ' com sucesso!', 'sucesso');
+        mostrar('Plano alterado para ' + dados.nome + ' com sucesso.', 'sucesso');
       } else {
         mostrar(dados.erro, 'erro');
       }

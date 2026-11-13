@@ -5,25 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EstoqueFácil - Criar conta</title>
   <link rel="stylesheet" href="/estilo.css">
+  <style>
+    .campo-senha { position: relative; }
+    .campo-senha input { width: 100%; padding-right: 44px; box-sizing: border-box; }
+    .olho {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      line-height: 0;
+      color: #555;
+    }
+    .olho .corte { display: none; }
+    .olho.ativo .corte { display: block; }
+  </style>
 </head>
 <body>
   <main class="container">
     <h1>Criar conta</h1>
 
     <div class="card estreito">
-      <p>Crie a conta do seu negócio. Quem cria a conta se torna o <strong>administrador</strong> e depois pode cadastrar os funcionários.</p>
+      <p>Cadastre a conta da sua empresa. O usuário que realiza o cadastro torna-se o <strong>administrador</strong> e poderá, posteriormente, cadastrar os funcionários.</p>
       <form id="formulario">
-        <label for="nome">Nome</label>
-        <input id="nome">
+        <label for="nome">Nome completo</label>
+        <input id="nome" autocomplete="name">
+
         <label for="email">E-mail</label>
-        <input id="email" type="email">
-        <label for="senha">Senha (mínimo 8 caracteres)</label>
-        <input id="senha" type="password">
+        <input id="email" type="email" autocomplete="email">
+
+        <label for="senha">Senha (mínimo de 8 caracteres)</label>
+        <div class="campo-senha">
+          <input id="senha" type="password" autocomplete="new-password">
+          <button type="button" class="olho" data-alvo="senha" aria-label="Mostrar senha">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+              <line class="corte" x1="3" y1="3" x2="21" y2="21"></line>
+            </svg>
+          </button>
+        </div>
+
         <label for="confirmar">Confirmar senha</label>
-        <input id="confirmar" type="password">
+        <div class="campo-senha">
+          <input id="confirmar" type="password" autocomplete="new-password">
+          <button type="button" class="olho" data-alvo="confirmar" aria-label="Mostrar senha">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+              <line class="corte" x1="3" y1="3" x2="21" y2="21"></line>
+            </svg>
+          </button>
+        </div>
+
         <div class="botoes">
           <button type="submit" class="primario">Criar conta</button>
-          <button type="button" id="voltar" class="secundario">Já tenho conta</button>
+          <button type="button" id="voltar" class="secundario">Já possuo conta</button>
         </div>
         <div id="mensagem"></div>
       </form>
@@ -39,6 +79,16 @@
       mensagem.className = classe;
     }
 
+    document.querySelectorAll('.olho').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const campo = document.getElementById(botao.dataset.alvo);
+        const visivel = campo.type === 'text';
+        campo.type = visivel ? 'password' : 'text';
+        botao.classList.toggle('ativo', !visivel);
+        botao.setAttribute('aria-label', visivel ? 'Mostrar senha' : 'Ocultar senha');
+      });
+    });
+
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
       mostrar('', '');
@@ -46,7 +96,7 @@
       const senha = document.getElementById('senha').value;
       const confirmar = document.getElementById('confirmar').value;
       if (senha !== confirmar) {
-        mostrar('As senhas não conferem.', 'erro');
+        mostrar('As senhas informadas não conferem.', 'erro');
         return;
       }
 
