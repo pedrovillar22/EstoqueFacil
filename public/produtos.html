@@ -24,8 +24,8 @@
     <h1 id="titulo">Cadastrar produto</h1>
 
     <div class="card estreito" id="aviso-funcionario" style="display: none;">
-      <p><strong>Apenas o administrador possui permissão para cadastrar produtos.</strong></p>
-      <p>Os produtos cadastrados podem ser consultados na lista abaixo.</p>
+      <p><strong>Você não possui permissão para cadastrar produtos.</strong></p>
+      <p>Solicite a liberação ao administrador. Os produtos cadastrados podem ser consultados na lista abaixo.</p>
     </div>
 
     <div class="card" id="cartao-formulario">
@@ -330,14 +330,23 @@
       });
     }
 
-    // Funcionário não vê o formulário nem o botão Editar: aparece um aviso no lugar
-    fetch('/api/me')
-      .then((r) => r.json())
-      .then((usuario) => {
-        ehAdministrador = usuario.perfil === 'administrador';
+    // O formulário aparece para o administrador e para funcionários liberados.
+    // A edição (botão Editar) é exclusiva do administrador.
+    fetch('/api/produtos/permissao')
+      .then((r) => {
+        if (r.status === 401) {
+          window.location.href = '/login.html';
+          return null;
+        }
+        return r.json();
+      })
+      .then((permissao) => {
+        if (!permissao) return;
+        ehAdministrador = permissao.administrador === true;
         if (ehAdministrador) {
           document.getElementById('th-acoes').style.display = '';
-        } else {
+        }
+        if (!permissao.pode_cadastrar) {
           document.getElementById('cartao-formulario').style.display = 'none';
           document.getElementById('aviso-funcionario').style.display = 'block';
           document.getElementById('titulo').textContent = 'Produtos';

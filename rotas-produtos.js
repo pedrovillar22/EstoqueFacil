@@ -15,10 +15,45 @@ function exigirLoginApi(req, res, next) {
 
 function exigirAdministrador(req, res, next) {
   if (req.session.usuario.perfil !== 'administrador') {
-    return res.status(403).json({ erro: 'Apenas o administrador possui permissão para cadastrar produtos.' });
+    return res.status(403).json({ erro: 'Apenas o administrador possui permissão para editar produtos.' });
   }
   next();
 }
+
+// O administrador sempre pode cadastrar; o funcionário só se o administrador o liberou.
+// A consulta ao banco garante que uma mudança de permissão valha imediatamente.
+async function lerPermissaoCadastro(req) {
+  const usuario = req.session.usuario;
+  if (usuario.perfil === 'administrador') return true;
+
+  const resultado = await pool.query(
+    'SELECT pode_cadastrar_produtos FROM usuarios WHERE id = $1 AND empresa_id = $2',
+    [usuario.id, usuario.empresa_id]
+  );
+  return resultado.rows.length > 0 && resultado.rows[0].pode_cadastrar_produtos === true;
+}
+
+async function exigirPermissaoCadastro(req, res, next) {
+  try {
+    if (await lerPermissaoCadastro(req)) return next();
+    return res.status(403).json({ erro: 'Você não possui permissão para cadastrar produtos. Solicite a liberação ao administrador.' });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+  }
+}
+
+router.get('/permissao', exigirLoginApi, async (req, res) => {
+  try {
+    res.json({
+      administrador: req.session.usuario.perfil === 'administrador',
+      pode_cadastrar: await lerPermissaoCadastro(req),
+    });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+  }
+});
 
 router.get('/', exigirLoginApi, async (req, res) => {
   try {
@@ -38,7 +73,7 @@ router.get('/', exigirLoginApi, async (req, res) => {
   }
 });
 
-router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
+router.post('/', exigirLoginApi, exigirPermissaoCadastro, async (req, res) => {
   const { nome, sku, categoria, descricao, quantidade, preco, estoque_minimo, unidade_medida, codigo_barras } = req.body;
 
   const nomeLimpo = (nome || '').trim();

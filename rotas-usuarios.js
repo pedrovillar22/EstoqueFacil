@@ -16,7 +16,7 @@ function exigirLoginApi(req, res, next) {
 
 function exigirAdministrador(req, res, next) {
   if (req.session.usuario.perfil !== 'administrador') {
-    return res.status(403).json({ erro: 'Apenas o administrador pode cadastrar usuários.' });
+    return res.status(403).json({ erro: 'Apenas o administrador possui permissão para gerenciar usuários.' });
   }
   next();
 }
@@ -27,13 +27,13 @@ function validarDados(corpo) {
   const senha = corpo.senha || '';
 
   if (!nome || !email || !senha) {
-    return { erro: 'Preencha nome, e-mail e senha.' };
+    return { erro: 'Preencha os campos obrigatórios: nome, e-mail e senha.' };
   }
   if (!EMAIL_VALIDO.test(email)) {
     return { erro: 'Informe um e-mail válido.' };
   }
   if (senha.length < 8) {
-    return { erro: 'A senha deve ter pelo menos 8 caracteres.' };
+    return { erro: 'A senha deve conter no mínimo 8 caracteres.' };
   }
   return { nome, email, senha };
 }
@@ -101,7 +101,7 @@ router.post('/cadastro', async (req, res) => {
 router.get('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   try {
     const resultado = await pool.query(
-      'SELECT id, nome, email, perfil, criado_em FROM usuarios WHERE empresa_id = $1 ORDER BY id DESC',
+      'SELECT id, nome, email, perfil, pode_cadastrar_produtos, criado_em FROM usuarios WHERE empresa_id = $1 ORDER BY id DESC',
       [req.session.usuario.empresa_id]
     );
     res.json(resultado.rows);
@@ -117,6 +117,8 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
   if (dados.erro) {
     return res.status(400).json({ erro: dados.erro });
   }
+  const podeCadastrarProdutos = req.body.pode_cadastrar_produtos === true;
+
   try {
     const uso = await lerUso(req.session.usuario.empresa_id);
     const plano = PLANOS[uso.planoAtual];
@@ -132,14 +134,46 @@ router.post('/', exigirLoginApi, exigirAdministrador, async (req, res) => {
     }
     const hash = await bcrypt.hash(dados.senha, 10);
     const resultado = await pool.query(
-      'INSERT INTO usuarios (nome, email, senha_hash, perfil, empresa_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, perfil',
-      [dados.nome, dados.email, hash, 'funcionario', req.session.usuario.empresa_id]
+      'INSERT INTO usuarios (nome, email, senha_hash, perfil, empresa_id, pode_cadastrar_produtos) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, nome, email, perfil, pode_cadastrar_produtos',
+      [dados.nome, dados.email, hash, 'funcionario', req.session.usuario.empresa_id, podeCadastrarProdutos]
     );
     res.status(201).json(resultado.rows[0]);
   } catch (erro) {
     if (erro.code === '23505') {
       return res.status(409).json({ erro: 'Já existe uma conta com esse e-mail.' });
     }
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+  }
+});
+
+// Liberar ou bloquear o cadastro de produtos para um funcionário (somente administrador)
+router.put('/:id/permissao-produtos', exigirLoginApi, exigirAdministrador, async (req, res) => {
+  const id = Number(req.params.id);
+  const { pode_cadastrar_produtos } = req.body;
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ erro: 'Usuário inválido.' });
+  }
+  if (typeof pode_cadastrar_produtos !== 'boolean') {
+    return res.status(400).json({ erro: 'Informe se o funcionário pode cadastrar produtos.' });
+  }
+
+  try {
+    const resultado = await pool.query(
+      `UPDATE usuarios
+       SET pode_cadastrar_produtos = $1
+       WHERE id = $2 AND empresa_id = $3 AND perfil = 'funcionario'
+       RETURNING id, nome, pode_cadastrar_produtos`,
+      [pode_cadastrar_produtos, id, req.session.usuario.empresa_id]
+    );
+
+    if (resultado.rowCount === 0) {
+      return res.status(404).json({ erro: 'Funcionário não encontrado.' });
+    }
+
+    res.json(resultado.rows[0]);
+  } catch (erro) {
     console.error(erro);
     res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
   }

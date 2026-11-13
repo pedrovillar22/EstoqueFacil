@@ -5,25 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EstoqueFácil - Usuários</title>
   <link rel="stylesheet" href="/estilo.css">
+  <style>
+    .campo-senha { position: relative; }
+    .campo-senha input { width: 100%; padding-right: 44px; box-sizing: border-box; }
+    .olho {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      margin: 0;
+      width: auto;
+      cursor: pointer;
+      line-height: 0;
+      color: #555;
+    }
+    .olho .corte { display: none; }
+    .olho.ativo .corte { display: block; }
+    .opcao { display: flex; align-items: center; gap: 8px; margin-top: 16px; cursor: pointer; }
+    .opcao input { width: auto; margin: 0; padding: 0; }
+    .dica { color: #64748b; font-size: 13px; margin: 4px 0 8px; }
+    .campo-erro { border-color: #c0392b !important; background: #fdf2f2; }
+    .erro-campo { color: #c0392b; font-size: 13px; margin: 4px 0 0; }
+    .permissao { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+  </style>
 </head>
 <body>
   <main class="container">
     <h1>Usuários</h1>
 
     <div class="card estreito" id="aviso-funcionario" style="display: none;">
-      <p><strong>Apenas o administrador pode cadastrar e consultar usuários.</strong></p>
+      <p><strong>Apenas o administrador possui permissão para cadastrar e consultar usuários.</strong></p>
     </div>
 
     <div id="area-admin" style="display: none;">
       <div class="card estreito">
         <h2>Cadastrar funcionário</h2>
-        <form id="formulario">
-          <label for="nome">Nome</label>
-          <input id="nome">
+        <form id="formulario" novalidate>
+          <label for="nome">Nome completo</label>
+          <input id="nome" autocomplete="off">
+
           <label for="email">E-mail</label>
-          <input id="email" type="email">
-          <label for="senha">Senha (mínimo 8 caracteres)</label>
-          <input id="senha" type="password">
+          <input id="email" type="email" autocomplete="off">
+
+          <label for="senha">Senha (mínimo de 8 caracteres)</label>
+          <div class="campo-senha">
+            <input id="senha" type="password" autocomplete="new-password" data-sem-trim="1">
+            <button type="button" class="olho" data-alvo="senha" aria-label="Mostrar senha">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+                <line class="corte" x1="3" y1="3" x2="21" y2="21"></line>
+              </svg>
+            </button>
+          </div>
+
+          <label class="opcao" for="pode_cadastrar_produtos">
+            <input type="checkbox" id="pode_cadastrar_produtos">
+            Permitir que este funcionário cadastre produtos
+          </label>
+          <div class="dica">O administrador pode alterar essa permissão a qualquer momento, na lista abaixo.</div>
+
           <div class="botoes">
             <button type="submit" class="primario">Cadastrar funcionário</button>
             <button type="button" id="cancelar" class="secundario">Cancelar</button>
@@ -34,12 +78,15 @@
 
       <div class="card">
         <h2>Usuários cadastrados</h2>
-        <table>
-          <thead>
-            <tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Criado em</th></tr>
-          </thead>
-          <tbody id="lista"></tbody>
-        </table>
+        <div id="mensagem-lista"></div>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Cadastro de produtos</th><th>Criado em</th></tr>
+            </thead>
+            <tbody id="lista"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
@@ -48,15 +95,135 @@
   <script>
     const formulario = document.getElementById('formulario');
     const mensagem = document.getElementById('mensagem');
+    const mensagemLista = document.getElementById('mensagem-lista');
     const lista = document.getElementById('lista');
 
-    function mostrar(texto, classe) {
-      mensagem.textContent = texto;
-      mensagem.className = classe;
+    const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // Regras de validação: mensagem exibida logo abaixo de cada campo
+    const REGRAS = [
+      { id: 'nome', vazio: 'Informe o nome completo do funcionário.' },
+      {
+        id: 'email',
+        vazio: 'Informe o e-mail do funcionário.',
+        invalido: (v) => !EMAIL_VALIDO.test(v),
+        mensagemInvalido: 'Informe um e-mail válido.',
+      },
+      {
+        id: 'senha',
+        vazio: 'Informe a senha do funcionário.',
+        invalido: (v) => v.length < 8,
+        mensagemInvalido: 'A senha deve conter no mínimo 8 caracteres.',
+      },
+    ];
+
+    function limparErro(campo) {
+      campo.classList.remove('campo-erro');
+      const aviso = document.querySelector('.erro-campo[data-para="' + campo.id + '"]');
+      if (aviso) aviso.remove();
+    }
+
+    function marcarErro(campo, texto) {
+      limparErro(campo);
+      campo.classList.add('campo-erro');
+      const aviso = document.createElement('div');
+      aviso.className = 'erro-campo';
+      aviso.dataset.para = campo.id;
+      aviso.textContent = texto;
+      const alvo = campo.closest('.campo-senha') || campo;
+      alvo.insertAdjacentElement('afterend', aviso);
+    }
+
+    function validar(regras) {
+      let primeiro = null;
+      regras.forEach((regra) => {
+        const campo = document.getElementById(regra.id);
+        limparErro(campo);
+        const valor = campo.dataset.semTrim ? campo.value : campo.value.trim();
+        let texto = null;
+        if (valor === '') {
+          texto = regra.vazio;
+        } else if (regra.invalido && regra.invalido(valor)) {
+          texto = regra.mensagemInvalido;
+        }
+        if (texto) {
+          marcarErro(campo, texto);
+          if (!primeiro) primeiro = campo;
+        }
+      });
+      if (primeiro) {
+        primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        primeiro.focus({ preventScroll: true });
+        return false;
+      }
+      return true;
+    }
+
+    // O erro some assim que a pessoa volta a digitar no campo
+    REGRAS.forEach((regra) => {
+      const campo = document.getElementById(regra.id);
+      campo.addEventListener('input', () => limparErro(campo));
+    });
+
+    document.querySelectorAll('.olho').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const campo = document.getElementById(botao.dataset.alvo);
+        const visivel = campo.type === 'text';
+        campo.type = visivel ? 'password' : 'text';
+        botao.classList.toggle('ativo', !visivel);
+        botao.setAttribute('aria-label', visivel ? 'Mostrar senha' : 'Ocultar senha');
+      });
+    });
+
+    // Exibe a mensagem; fora do formulário, aplica o visual de caixa colorida
+    function exibir(elemento, texto, classe) {
+      elemento.textContent = texto;
+      elemento.className = classe;
+      if (elemento.id === 'mensagem') return;
+      if (!texto) {
+        elemento.style.cssText = '';
+        return;
+      }
+      const ok = classe === 'sucesso';
+      elemento.style.cssText =
+        'padding: 12px 14px; border-radius: 6px; font-size: 14px; margin: 12px 0; ' +
+        'background: ' + (ok ? '#dcfce7' : '#fee2e2') + '; ' +
+        'color: ' + (ok ? '#166534' : '#991b1b') + ';';
     }
 
     function nomeDoPerfil(perfil) {
       return perfil === 'administrador' ? 'Administrador' : 'Funcionário';
+    }
+
+    async function alterarPermissao(usuario, liberar, botao) {
+      botao.disabled = true;
+      exibir(mensagemLista, '', '');
+
+      const resposta = await fetch('/api/usuarios/' + usuario.id + '/permissao-produtos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pode_cadastrar_produtos: liberar }),
+      });
+
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const dados = await resposta.json();
+      if (resposta.ok) {
+        exibir(
+          mensagemLista,
+          liberar
+            ? 'Cadastro de produtos liberado para "' + dados.nome + '".'
+            : 'Cadastro de produtos bloqueado para "' + dados.nome + '".',
+          'sucesso'
+        );
+        carregarLista();
+      } else {
+        botao.disabled = false;
+        exibir(mensagemLista, dados.erro, 'erro');
+      }
     }
 
     async function carregarLista() {
@@ -72,16 +239,44 @@
       lista.innerHTML = '';
       usuarios.forEach((u) => {
         const linha = document.createElement('tr');
-        [
-          u.nome,
-          u.email,
-          nomeDoPerfil(u.perfil),
-          new Date(u.criado_em).toLocaleDateString('pt-BR'),
-        ].forEach((valor) => {
+
+        [u.nome, u.email, nomeDoPerfil(u.perfil)].forEach((valor) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
           linha.appendChild(celula);
         });
+
+        const celulaPermissao = document.createElement('td');
+        const bloco = document.createElement('div');
+        bloco.className = 'permissao';
+        const texto = document.createElement('span');
+
+        if (u.perfil === 'administrador') {
+          texto.textContent = 'Sempre permitido';
+          texto.style.color = '#15803d';
+          bloco.appendChild(texto);
+        } else {
+          const permitido = u.pode_cadastrar_produtos === true;
+          texto.textContent = permitido ? 'Permitido' : 'Não permitido';
+          texto.style.color = permitido ? '#15803d' : '#64748b';
+          bloco.appendChild(texto);
+
+          const botao = document.createElement('button');
+          botao.type = 'button';
+          botao.className = 'secundario';
+          botao.style.cssText = 'padding: 6px 12px; width: auto; margin: 0;';
+          botao.textContent = permitido ? 'Bloquear' : 'Permitir';
+          botao.addEventListener('click', () => alterarPermissao(u, !permitido, botao));
+          bloco.appendChild(botao);
+        }
+
+        celulaPermissao.appendChild(bloco);
+        linha.appendChild(celulaPermissao);
+
+        const celulaData = document.createElement('td');
+        celulaData.textContent = new Date(u.criado_em).toLocaleDateString('pt-BR');
+        linha.appendChild(celulaData);
+
         lista.appendChild(linha);
       });
     }
@@ -106,7 +301,12 @@
 
     formulario.addEventListener('submit', async (evento) => {
       evento.preventDefault();
-      mostrar('', '');
+      exibir(mensagem, '', '');
+
+      if (!validar(REGRAS)) {
+        exibir(mensagem, 'Preencha os campos destacados para continuar.', 'erro');
+        return;
+      }
 
       const resposta = await fetch('/api/usuarios', {
         method: 'POST',
@@ -115,6 +315,7 @@
           nome: document.getElementById('nome').value,
           email: document.getElementById('email').value,
           senha: document.getElementById('senha').value,
+          pode_cadastrar_produtos: document.getElementById('pode_cadastrar_produtos').checked,
         }),
       });
 
@@ -125,11 +326,11 @@
 
       const dados = await resposta.json();
       if (resposta.ok) {
-        mostrar('Funcionário "' + dados.nome + '" cadastrado com sucesso!', 'sucesso');
+        exibir(mensagem, 'Funcionário "' + dados.nome + '" cadastrado com sucesso.', 'sucesso');
         formulario.reset();
         carregarLista();
       } else {
-        mostrar(dados.erro, 'erro');
+        exibir(mensagem, dados.erro, 'erro');
       }
     });
 
