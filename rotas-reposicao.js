@@ -13,7 +13,7 @@ function exigirLoginApi(req, res, next) {
 router.get('/sugestao', exigirLoginApi, async (req, res) => {
   try {
     const resultado = await pool.query(
-      `SELECT p.id, p.nome, p.sku, p.categoria, p.quantidade, p.estoque_minimo,
+      `SELECT p.id, p.nome, p.sku, p.categoria, p.unidade_medida, p.quantidade, p.estoque_minimo,
               COALESCE(SUM(m.quantidade), 0)::int AS vendido_30_dias,
               GREATEST(COALESCE(SUM(m.quantidade), 0) + p.estoque_minimo - p.quantidade, 0)::int AS sugestao
        FROM produtos p
