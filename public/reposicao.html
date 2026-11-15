@@ -64,8 +64,17 @@
       mostrar(dados.length + ' produto(s) com sugestão de reposição. Registre uma entrada de estoque para realizar a reposição.', 'erro');
 
       dados.forEach((p) => {
+        const unidade = p.unidade_medida || 'un';
         const linha = document.createElement('tr');
-        [p.nome, p.sku, p.categoria, p.quantidade, p.estoque_minimo, p.vendido_30_dias, p.sugestao].forEach((valor) => {
+        [
+          p.nome,
+          p.sku,
+          p.categoria,
+          p.quantidade + ' ' + unidade,
+          p.estoque_minimo + ' ' + unidade,
+          p.vendido_30_dias + ' ' + unidade,
+          p.sugestao + ' ' + unidade
+        ].forEach((valor) => {
           const celula = document.createElement('td');
           celula.textContent = valor;
           linha.appendChild(celula);
