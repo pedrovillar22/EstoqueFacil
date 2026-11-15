@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Pagamento</title>
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Pagamento</h1>
+    <div id="mensagem"></div>
+
+    <div class="card" id="area-pagamento" style="display: none;">
+      <h2>Plano <span id="plano-nome"></span></h2>
+      <p>Valor: <strong id="plano-valor"></strong></p>
+
+      <img id="qr" alt="QR code do pagamento" width="220" height="220"
+           style="display: block; margin: 12px 0; border: 1px solid #e2e8f0; border-radius: 6px;">
+
+      <p>Escaneie o QR code com o aplicativo do seu banco ou clique em "Simular pagamento".</p>
+      <p><small>Código: <span id="codigo"></span> (pagamento simulado, nenhuma cobrança real)</small></p>
+
+      <p>
+        <button type="button" class="primario" id="btn-pagar">Simular pagamento</button>
+        <a href="/planos.html"><button type="button">Cancelar</button></a>
+      </p>
+    </div>
+
+    <p><a href="/planos.html">Voltar para os planos</a></p>
+  </main>
+
+  <script src="/menu.js"></script>
+  <script src="/pagamento.js"></script>
+</body>
+</html>

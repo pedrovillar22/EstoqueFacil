@@ -17,16 +17,14 @@
       <div id="mensagem"></div>
     </div>
 
-    <div id="pagamento" class="card" style="display: none;"></div>
-
     <div id="planos" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;"></div>
 
     <p style="margin-top: 16px;"><small>Pagamento simulado: nenhuma cobrança real será efetuada.</small></p>
   </main>
 
   <script src="/menu.js"></script>
-  <script src="/pagamento.js"></script>
   <script>
+    const PLANOS_PAGOS = ['basico', 'pro'];
     const mensagem = document.getElementById('mensagem');
     let ehAdministrador = false;
 
@@ -38,6 +36,14 @@
     function textoLimite(valor, singular, plural) {
       if (valor === null) return 'Limite definido em contrato';
       return valor + ' ' + (valor === 1 ? singular : plural);
+    }
+
+    function escolherPlano(chave) {
+      if (PLANOS_PAGOS.includes(chave)) {
+        window.location.href = '/pagamento.html?plano=' + encodeURIComponent(chave);
+      } else {
+        selecionar(chave);
+      }
     }
 
     function criarCartao(chave, plano, planoAtual) {
@@ -76,7 +82,7 @@
         botao.type = 'button';
         botao.className = 'primario';
         botao.textContent = 'Selecionar ' + plano.nome;
-        botao.addEventListener('click', () => (PLANOS_PAGOS.includes(chave) ? abrirPagamento(chave) : selecionar(chave)));
+        botao.addEventListener('click', () => escolherPlano(chave));
         cartao.appendChild(botao);
       }
 

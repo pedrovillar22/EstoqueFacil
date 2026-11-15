@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Pagamento confirmado</title>
+  <link rel="stylesheet" href="/estilo.css">
+</head>
+<body>
+  <main class="container">
+    <h1>Pagamento confirmado</h1>
+
+    <div class="card">
+      <div id="mensagem" class="sucesso">Pagamento simulado confirmado com sucesso.</div>
+      <h2>Plano ativado: <span id="plano-nome">-</span></h2>
+      <p>Valor: <strong id="plano-valor">-</strong></p>
+      <p id="plano-limites"></p>
+      <p><small>Pagamento simulado: nenhuma cobrança real foi efetuada.</small></p>
+      <p>
+        <a href="/dashboard.html"><button type="button" class="primario">Ir para o Dashboard</button></a>
+        <a href="/planos.html"><button type="button">Ver planos</button></a>
+      </p>
+    </div>
+  </main>
+
+  <script src="/menu.js"></script>
+  <script>
+    function textoLimite(valor, singular, plural) {
+      if (valor === null) return 'limite definido em contrato';
+      return valor + ' ' + (valor === 1 ? singular : plural);
+    }
+
+    async function carregar() {
+      const resposta = await fetch('/api/planos');
+      if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+      }
+      if (!resposta.ok) return;
+      const dados = await resposta.json();
+      const plano = dados.planos[dados.planoAtual];
+
+      document.getElementById('plano-nome').textContent = plano.nome;
+      document.getElementById('plano-valor').textContent = plano.preco;
+      document.getElementById('plano-limites').textContent =
+        'Limites do plano: ' +
+        textoLimite(plano.produtos, 'produto', 'produtos') + ', ' +
+        textoLimite(plano.usuarios, 'usuário', 'usuários') + ' e ' +
+        textoLimite(plano.filiais, 'filial', 'filiais') + '.';
+    }
+
+    carregar();
+  </script>
+</body>
+</html>
