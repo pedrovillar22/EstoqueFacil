@@ -43,7 +43,7 @@ app.post('/api/login', async (req, res) => {
     if (!senhaCorreta) {
       return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });
     }
-        req.session.usuario = {
+    req.session.usuario = {
       id: usuario.id,
       nome: usuario.nome,
       perfil: usuario.perfil,
@@ -67,7 +67,6 @@ app.get('/api/me', (req, res) => {
   res.json(req.session.usuario);
 });
 
-
 app.get('/produtos.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'produtos.html'));
 });
@@ -79,7 +78,6 @@ app.get('/estoque.html', exigirLogin, (req, res) => {
 app.get('/vendas.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'vendas.html'));
 });
-
 
 app.get('/historico.html', exigirLogin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'historico.html'));
@@ -106,6 +104,7 @@ app.use('/api/reposicao', require('./rotas-reposicao'));
 app.use('/api/dashboard', require('./rotas-dashboard'));
 app.use('/api/usuarios', require('./rotas-usuarios'));
 app.use('/api/planos', require('./rotas-planos'));
+app.use('/api/recuperacao', require('./rotas-recuperacao'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
