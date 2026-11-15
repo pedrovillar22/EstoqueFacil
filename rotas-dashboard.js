@@ -10,12 +10,42 @@ function exigirLoginApi(req, res, next) {
   next();
 }
 
+// Data de hoje no fuso de Brasília, no formato AAAA-MM-DD
+function hojeBrasil() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+function dataValida(texto) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
+  const d = new Date(texto + 'T00:00:00Z');
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === texto;
+}
+
+// Filtro de período (usa o dia no fuso de Brasília)
+const FILTRO_PERIODO =
+  "(criado_em AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN $2::date AND $3::date";
+const FILTRO_PERIODO_M =
+  "(m.criado_em AT TIME ZONE 'America/Sao_Paulo')::date BETWEEN $2::date AND $3::date";
+
 router.get('/resumo', exigirLoginApi, async (req, res) => {
+  const hoje = hojeBrasil();
+  const inicio = req.query.inicio || hoje.slice(0, 8) + '01';
+  const fim = req.query.fim || hoje;
+
+  if (!dataValida(inicio) || !dataValida(fim)) {
+    return res.status(400).json({ erro: 'Período inválido.' });
+  }
+  if (inicio > fim) {
+    return res.status(400).json({ erro: 'A data inicial não pode ser maior que a data final.' });
+  }
+
   const empresa = [req.session.usuario.empresa_id];
+  const periodo = [req.session.usuario.empresa_id, inicio, fim];
+
   try {
-    const [totais, baixo, vendasMes, entradasMes, maisVendidos, ultimas] =
+    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas] =
       await Promise.all([
-        // Total de produtos, unidades e valor do estoque
+        // Total de produtos, unidades e valor do estoque (situação atual)
         pool.query(
           `SELECT COUNT(*)::int AS total_produtos,
                   COALESCE(SUM(quantidade), 0)::int AS total_unidades,
@@ -24,7 +54,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
            WHERE empresa_id = $1`,
           empresa
         ),
-        // Produtos com estoque baixo (mesma regra do alerta)
+        // Produtos com estoque baixo (situação atual)
         pool.query(
           `SELECT COUNT(*)::int AS total
            FROM produtos
@@ -32,7 +62,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
              AND empresa_id = $1`,
           empresa
         ),
-        // Vendas do mês atual
+        // Vendas do período
         pool.query(
           `SELECT COUNT(*)::int AS qtd_vendas,
                   COALESCE(SUM(quantidade), 0)::int AS unidades_vendidas,
@@ -40,33 +70,33 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
            FROM movimentacoes
            WHERE tipo = 'saida'
              AND empresa_id = $1
-             AND criado_em >= date_trunc('month', NOW())`,
-          empresa
+             AND ${FILTRO_PERIODO}`,
+          periodo
         ),
-        // Entradas do mês atual
+        // Entradas do período
         pool.query(
           `SELECT COUNT(*)::int AS qtd_entradas,
                   COALESCE(SUM(quantidade), 0)::int AS unidades_entrada
            FROM movimentacoes
            WHERE tipo = 'entrada'
              AND empresa_id = $1
-             AND criado_em >= date_trunc('month', NOW())`,
-          empresa
+             AND ${FILTRO_PERIODO}`,
+          periodo
         ),
-        // Top 5 produtos mais vendidos (últimos 30 dias)
+        // Top 5 produtos mais vendidos no período
         pool.query(
           `SELECT p.nome, SUM(m.quantidade)::int AS vendidos
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
            WHERE m.tipo = 'saida'
              AND m.empresa_id = $1
-             AND m.criado_em >= NOW() - INTERVAL '30 days'
+             AND ${FILTRO_PERIODO_M}
            GROUP BY p.id, p.nome
            ORDER BY vendidos DESC, p.nome ASC
            LIMIT 5`,
-          empresa
+          periodo
         ),
-        // Últimas 5 movimentações
+        // Últimas 5 movimentações (sempre as mais recentes)
         pool.query(
           `SELECT m.id, m.tipo, m.quantidade, m.criado_em, p.nome AS produto
            FROM movimentacoes m
@@ -79,10 +109,11 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
       ]);
 
     res.json({
+      periodo: { inicio, fim },
       produtos: totais.rows[0],
       estoque_baixo: baixo.rows[0].total,
-      vendas_mes: vendasMes.rows[0],
-      entradas_mes: entradasMes.rows[0],
+      vendas_mes: vendasPeriodo.rows[0],
+      entradas_mes: entradasPeriodo.rows[0],
       mais_vendidos: maisVendidos.rows,
       ultimas_movimentacoes: ultimas.rows
     });
