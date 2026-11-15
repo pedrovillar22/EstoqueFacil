@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstoqueFácil - Redefinir senha</title>
+  <link rel="stylesheet" href="/estilo.css">
+  <style>
+    body { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .login { width: 360px; }
+    .login h1 { text-align: center; color: #1e3a5f; margin-bottom: 4px; }
+    .login .subtitulo { text-align: center; color: #64748b; font-size: 14px; margin: 0 0 8px; }
+    .login button { width: 100%; }
+    .login .voltar { text-align: center; font-size: 14px; margin: 16px 0 0; }
+    .login .voltar a { color: #2563eb; font-weight: 600; text-decoration: none; }
+    .login .voltar a:hover { text-decoration: underline; }
+    .aviso { background: #dcfce7; color: #166534; padding: 10px 12px; border-radius: 8px; font-size: 14px; margin: 12px 0; }
+    .mostrar { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #64748b; margin-top: 8px; }
+    .mostrar input { width: auto; margin: 0; }
+    .oculto { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card login">
+    <h1>Redefinir senha</h1>
+    <p class="subtitulo" id="subtitulo">Informe o e-mail da sua conta para receber um código</p>
+
+    <form id="formEmail">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" required>
+      <div class="botoes">
+        <button type="submit" class="primario">Enviar código</button>
+      </div>
+    </form>
+
+    <form id="formCodigo" class="oculto">
+      <div class="aviso" id="aviso"></div>
+      <label for="codigo">Código recebido por e-mail</label>
+      <input type="text" id="codigo" inputmode="numeric" maxlength="6" required>
+      <label for="novaSenha">Nova senha</label>
+      <input type="password" id="novaSenha" minlength="8" required>
+      <label class="mostrar"><input type="checkbox" id="mostrar"> Mostrar senha</label>
+      <div class="botoes">
+        <button type="submit" class="primario">Redefinir senha</button>
+      </div>
+    </form>
+
+    <div id="erro"></div>
+    <p class="voltar"><a href="/login.html">Voltar para o login</a></p>
+  </div>
+
+  <script>
+    const formEmail = document.getElementById('formEmail');
+    const formCodigo = document.getElementById('formCodigo');
+    const erro = document.getElementById('erro');
+    const aviso = document.getElementById('aviso');
+    let emailInformado = '';
+
+    document.getElementById('mostrar').addEventListener('change', (e) => {
+      document.getElementById('novaSenha').type = e.target.checked ? 'text' : 'password';
+    });
+
+    formEmail.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      erro.textContent = '';
+      emailInformado = document.getElementById('email').value.trim();
+
+      const resposta = await fetch('/api/recuperacao/solicitar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInformado }),
+      });
+      const dados = await resposta.json();
+
+      if (resposta.ok) {
+        aviso.textContent = dados.mensagem;
+        formEmail.classList.add('oculto');
+        formCodigo.classList.remove('oculto');
+        document.getElementById('subtitulo').textContent = 'Digite o código e escolha uma nova senha';
+      } else {
+        erro.textContent = dados.erro;
+      }
+    });
+
+    formCodigo.addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+      erro.textContent = '';
+
+      const resposta = await fetch('/api/recuperacao/redefinir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailInformado,
+          codigo: document.getElementById('codigo').value,
+          novaSenha: document.getElementById('novaSenha').value,
+        }),
+      });
+      const dados = await resposta.json();
+
+      if (resposta.ok) {
+        formCodigo.classList.add('oculto');
+        document.getElementById('subtitulo').textContent = '';
+        erro.innerHTML = '<div class="aviso">' + dados.mensagem + '</div>';
+        setTimeout(() => { window.location.href = '/login.html'; }, 2500);
+      } else {
+        erro.textContent = dados.erro;
+      }
+    });
+  </script>
+</body>
+</html>
