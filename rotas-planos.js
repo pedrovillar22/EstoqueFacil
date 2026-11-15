@@ -1,4 +1,5 @@
 const express = require('express');
+const QRCode = require('qrcode');
 const pool = require('./db');
 
 const router = express.Router();
@@ -67,19 +68,26 @@ router.post('/pagamento/iniciar', exigirLoginApi, exigirAdministrador, async (re
     if (plano.usuarios !== null && uso.usuarios > plano.usuarios) {
       return res.status(409).json({ erro: `Você tem ${uso.usuarios} usuários e o plano ${plano.nome} permite ${plano.usuarios}.` });
     }
+
+    const codigo = 'SIM' + Date.now().toString(36).toUpperCase();
+    req.session.pagamento = { plano: escolhido, codigo: codigo, confirmado: false };
+
+    // Texto que o QR code carrega (pagamento simulado, sem cobrança real)
+    const textoQr = 'ESTOQUEFACIL-PAGAMENTO-SIMULADO-' + codigo;
+    const qrImagem = await QRCode.toDataURL(textoQr, { width: 220, margin: 1 });
+
+    res.json({
+      codigo: codigo,
+      plano: escolhido,
+      nome: PLANOS[escolhido].nome,
+      valor: PLANOS[escolhido].preco,
+      qr: textoQr,
+      qr_imagem: qrImagem,
+    });
   } catch (erro) {
     console.error(erro);
-    return res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
+    res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });
   }
-  const codigo = 'SIM' + Date.now().toString(36).toUpperCase();
-  req.session.pagamento = { plano: escolhido, codigo: codigo, confirmado: false };
-  res.json({
-    codigo: codigo,
-    plano: escolhido,
-    nome: PLANOS[escolhido].nome,
-    valor: PLANOS[escolhido].preco,
-    qr: 'ESTOQUEFACIL-PAGAMENTO-SIMULADO-' + codigo,
-  });
 });
 
 router.post('/pagamento/confirmar', exigirLoginApi, exigirAdministrador, (req, res) => {
