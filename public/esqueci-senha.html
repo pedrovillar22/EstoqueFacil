@@ -46,6 +46,7 @@
     </form>
 
     <div id="erro"></div>
+    <div id="sucesso"></div>
     <p class="voltar"><a href="/login.html">Voltar para o login</a></p>
   </div>
 
@@ -53,6 +54,7 @@
     const formEmail = document.getElementById('formEmail');
     const formCodigo = document.getElementById('formCodigo');
     const erro = document.getElementById('erro');
+    const sucesso = document.getElementById('sucesso');
     const aviso = document.getElementById('aviso');
     let emailInformado = '';
 
@@ -85,6 +87,7 @@
     formCodigo.addEventListener('submit', async (evento) => {
       evento.preventDefault();
       erro.textContent = '';
+      sucesso.innerHTML = '';
 
       const resposta = await fetch('/api/recuperacao/redefinir', {
         method: 'POST',
@@ -100,7 +103,7 @@
       if (resposta.ok) {
         formCodigo.classList.add('oculto');
         document.getElementById('subtitulo').textContent = '';
-        erro.innerHTML = '<div class="aviso">' + dados.mensagem + '</div>';
+        sucesso.innerHTML = '<div class="aviso">' + dados.mensagem + '</div>';
         setTimeout(() => { window.location.href = '/login.html'; }, 2500);
       } else {
         erro.textContent = dados.erro;
