@@ -22,6 +22,10 @@
       gap: 16px;
     }
     .duas-colunas .card { margin: 0; }
+    .grafico-largo { margin: 0 0 20px 0; }
+    .area-grafico { position: relative; height: 280px; }
+    .area-grafico.menor { height: 260px; }
+    .sem-dados { opacity: 0.7; margin: 8px 0 0; }
 
     .periodo { margin-bottom: 20px; }
     .periodo .campos {
@@ -108,18 +112,21 @@
       </div>
     </div>
 
+    <div class="card grafico-largo">
+      <h2>Faturamento por dia</h2>
+      <div class="area-grafico" id="area-vendas-dia">
+        <canvas id="grafico-vendas-dia"></canvas>
+      </div>
+      <p class="sem-dados" id="vazio-vendas-dia" style="display: none;">Nenhuma venda no período selecionado.</p>
+    </div>
+
     <div class="duas-colunas">
       <div class="card">
         <h2>Produtos mais vendidos no período</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Produto</th>
-              <th>Unidades vendidas</th>
-            </tr>
-          </thead>
-          <tbody id="mais-vendidos"></tbody>
-        </table>
+        <div class="area-grafico menor" id="area-mais-vendidos">
+          <canvas id="grafico-mais-vendidos"></canvas>
+        </div>
+        <p class="sem-dados" id="vazio-mais-vendidos" style="display: none;">Nenhuma venda no período selecionado.</p>
       </div>
 
       <div class="card">
@@ -139,12 +146,16 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="/menu.js"></script>
   <script>
     const mensagem = document.getElementById('mensagem');
     const campoInicio = document.getElementById('data-inicio');
     const campoFim = document.getElementById('data-fim');
     const botoesAtalho = document.querySelectorAll('.atalho');
+
+    const COR_PRINCIPAL = '#2563eb';
+    const COR_GRADE = '#e2e8f0';
 
     function dinheiro(valor) {
       return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -213,6 +224,108 @@
       });
     }
 
+    let graficoVendasDia = null;
+    let graficoMaisVendidos = null;
+
+    function desenharGraficoVendasDia(lista) {
+      const canvas = document.getElementById('grafico-vendas-dia');
+      const area = document.getElementById('area-vendas-dia');
+      const vazio = document.getElementById('vazio-vendas-dia');
+
+      if (graficoVendasDia) {
+        graficoVendasDia.destroy();
+        graficoVendasDia = null;
+      }
+
+      const temVenda = lista.some((d) => Number(d.faturamento) > 0);
+      area.style.display = temVenda ? 'block' : 'none';
+      vazio.style.display = temVenda ? 'none' : 'block';
+      if (!temVenda || typeof Chart === 'undefined') return;
+
+      graficoVendasDia = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: lista.map((d) => d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7)),
+          datasets: [{
+            label: 'Faturamento',
+            data: lista.map((d) => Number(d.faturamento)),
+            backgroundColor: COR_PRINCIPAL,
+            borderRadius: 4,
+            maxBarThickness: 40
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) =>
+                  `${dinheiro(ctx.parsed.y)} em ${lista[ctx.dataIndex].qtd_vendas} venda(s)`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: COR_GRADE },
+              border: { display: false },
+              ticks: { callback: (v) => 'R$ ' + v }
+            }
+          }
+        }
+      });
+    }
+
+    function desenharGraficoMaisVendidos(lista) {
+      const canvas = document.getElementById('grafico-mais-vendidos');
+      const area = document.getElementById('area-mais-vendidos');
+      const vazio = document.getElementById('vazio-mais-vendidos');
+
+      if (graficoMaisVendidos) {
+        graficoMaisVendidos.destroy();
+        graficoMaisVendidos = null;
+      }
+
+      area.style.display = lista.length ? 'block' : 'none';
+      vazio.style.display = lista.length ? 'none' : 'block';
+      if (!lista.length || typeof Chart === 'undefined') return;
+
+      graficoMaisVendidos = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: lista.map((p) => p.nome),
+          datasets: [{
+            label: 'Unidades vendidas',
+            data: lista.map((p) => p.vendidos),
+            backgroundColor: COR_PRINCIPAL,
+            borderRadius: 4,
+            maxBarThickness: 28
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { color: COR_GRADE },
+              border: { display: false },
+              ticks: { precision: 0 }
+            },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
     async function carregarDashboard() {
       const inicio = campoInicio.value;
       const fim = campoFim.value;
@@ -249,11 +362,8 @@
       document.getElementById('faturamento-mes').textContent = dinheiro(dados.vendas_mes.faturamento);
       document.getElementById('entradas-mes').textContent = dados.entradas_mes.qtd_entradas;
 
-      preencherTabela(
-        'mais-vendidos',
-        dados.mais_vendidos.map((p) => [p.nome, p.vendidos]),
-        2
-      );
+      desenharGraficoVendasDia(dados.vendas_por_dia);
+      desenharGraficoMaisVendidos(dados.mais_vendidos);
 
       preencherTabela(
         'ultimas',

@@ -39,11 +39,17 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
     return res.status(400).json({ erro: 'A data inicial não pode ser maior que a data final.' });
   }
 
+  const dias =
+    (new Date(fim + 'T00:00:00Z') - new Date(inicio + 'T00:00:00Z')) / 86400000;
+  if (dias > 366) {
+    return res.status(400).json({ erro: 'O período não pode passar de 1 ano.' });
+  }
+
   const empresa = [req.session.usuario.empresa_id];
   const periodo = [req.session.usuario.empresa_id, inicio, fim];
 
   try {
-    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas] =
+    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia] =
       await Promise.all([
         // Total de produtos, unidades e valor do estoque (situação atual)
         pool.query(
@@ -105,6 +111,20 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
            ORDER BY m.criado_em DESC, m.id DESC
            LIMIT 5`,
           empresa
+        ),
+        // Faturamento por dia no período (dias sem venda aparecem com zero)
+        pool.query(
+          `SELECT to_char(d, 'YYYY-MM-DD') AS dia,
+                  COALESCE(SUM(m.valor_total), 0) AS faturamento,
+                  COUNT(m.id)::int AS qtd_vendas
+           FROM generate_series($2::timestamp, $3::timestamp, interval '1 day') AS d
+           LEFT JOIN movimentacoes m
+             ON m.tipo = 'saida'
+            AND m.empresa_id = $1
+            AND (m.criado_em AT TIME ZONE 'America/Sao_Paulo')::date = d::date
+           GROUP BY d
+           ORDER BY d`,
+          periodo
         )
       ]);
 
@@ -115,7 +135,8 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
       vendas_mes: vendasPeriodo.rows[0],
       entradas_mes: entradasPeriodo.rows[0],
       mais_vendidos: maisVendidos.rows,
-      ultimas_movimentacoes: ultimas.rows
+      ultimas_movimentacoes: ultimas.rows,
+      vendas_por_dia: vendasPorDia.rows
     });
   } catch (erro) {
     console.error(erro);
