@@ -78,7 +78,7 @@
         <button type="button" class="atalho" data-atalho="mes">Este mês</button>
         <button type="button" class="atalho" data-atalho="mesanterior">Mês anterior</button>
       </div>
-      <p class="dica">O período vale para vendas, faturamento, entradas e produtos mais vendidos. Estoque e alertas mostram a situação atual.</p>
+      <p class="dica">O período vale para vendas, faturamento, entradas e produtos mais vendidos. Estoque, alertas e equipe mostram a situação atual.</p>
     </div>
 
     <div class="resumo">
@@ -97,6 +97,10 @@
       <div class="card" id="card-alertas">
         <div class="rotulo">Alertas de estoque</div>
         <div class="valor" id="estoque-baixo">-</div>
+      </div>
+      <div class="card">
+        <div class="rotulo">Usuários da equipe</div>
+        <div class="valor" id="total-usuarios">-</div>
       </div>
       <div class="card">
         <div class="rotulo">Vendas no período</div>
@@ -357,6 +361,8 @@
       const baixo = document.getElementById('estoque-baixo');
       baixo.textContent = dados.estoque_baixo;
       baixo.classList.toggle('alerta', dados.estoque_baixo > 0);
+
+      document.getElementById('total-usuarios').textContent = dados.total_usuarios;
 
       document.getElementById('vendas-mes').textContent = dados.vendas_mes.qtd_vendas;
       document.getElementById('faturamento-mes').textContent = dinheiro(dados.vendas_mes.faturamento);

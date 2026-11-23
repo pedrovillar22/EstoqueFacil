@@ -49,7 +49,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
   const periodo = [req.session.usuario.empresa_id, inicio, fim];
 
   try {
-    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia] =
+    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia, usuarios] =
       await Promise.all([
         // Total de produtos, unidades e valor do estoque (situação atual)
         pool.query(
@@ -125,6 +125,13 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
            GROUP BY d
            ORDER BY d`,
           periodo
+        ),
+        // Quantidade de usuários da equipe (situação atual)
+        pool.query(
+          `SELECT COUNT(*)::int AS total
+           FROM usuarios
+           WHERE empresa_id = $1`,
+          empresa
         )
       ]);
 
@@ -132,6 +139,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
       periodo: { inicio, fim },
       produtos: totais.rows[0],
       estoque_baixo: baixo.rows[0].total,
+      total_usuarios: usuarios.rows[0].total,
       vendas_mes: vendasPeriodo.rows[0],
       entradas_mes: entradasPeriodo.rows[0],
       mais_vendidos: maisVendidos.rows,
