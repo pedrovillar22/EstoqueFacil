@@ -27,10 +27,11 @@ router.get('/', exigirLoginApi, async (req, res) => {
 
     const resultado = await pool.query(
       `SELECT m.id, m.criado_em, p.nome AS produto, p.sku, m.tipo,
-              m.quantidade, m.valor_total, u.nome AS usuario, m.observacao
+              m.quantidade, m.valor_total, u.nome AS usuario, m.observacao, m.estornada_em, ue.nome AS estornada_por
        FROM movimentacoes m
        JOIN produtos p ON p.id = m.produto_id
        JOIN usuarios u ON u.id = m.usuario_id
+       LEFT JOIN usuarios ue ON ue.id = m.estornada_por
        ${filtro}
        ORDER BY m.criado_em DESC, m.id DESC
        LIMIT 100`,

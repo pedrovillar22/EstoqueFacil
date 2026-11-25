@@ -106,6 +106,7 @@ app.use('/api/usuarios', require('./rotas-usuarios'));
 app.use('/api/planos', require('./rotas-planos'));
 app.use('/api/recuperacao', require('./rotas-recuperacao'));
 app.use('/api/exportar', require('./rotas-exportar'));
+app.use('/api/estorno', require('./rotas-estorno'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {

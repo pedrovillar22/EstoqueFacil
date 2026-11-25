@@ -101,10 +101,11 @@ router.get('/historico', exigirLoginApi, async (req, res) => {
 
     const resultado = await pool.query(
       `SELECT m.criado_em, p.nome AS produto, p.sku, m.tipo,
-              m.quantidade, m.valor_total, u.nome AS usuario, m.observacao
+              m.quantidade, m.valor_total, u.nome AS usuario, m.observacao, m.estornada_em, ue.nome AS estornada_por
        FROM movimentacoes m
        JOIN produtos p ON p.id = m.produto_id
        JOIN usuarios u ON u.id = m.usuario_id
+       LEFT JOIN usuarios ue ON ue.id = m.estornada_por
        ${filtro}
        ORDER BY m.criado_em DESC, m.id DESC`,
       parametros
@@ -119,6 +120,7 @@ router.get('/historico', exigirLoginApi, async (req, res) => {
       valor_total: m.valor_total === null ? null : Number(m.valor_total),
       usuario: m.usuario,
       observacao: m.observacao || '',
+      situacao: m.estornada_em ? 'Estornada' : 'Ativa',
     }));
 
     const colunas = [
@@ -130,6 +132,7 @@ router.get('/historico', exigirLoginApi, async (req, res) => {
       { header: 'Valor total', key: 'valor_total', width: 16, style: { numFmt: '"R$" #,##0.00' } },
       { header: 'Usuário', key: 'usuario', width: 22 },
       { header: 'Observação', key: 'observacao', width: 36 },
+      { header: 'Situação', key: 'situacao', width: 14 },
     ];
 
     await enviarPlanilha(res, `historico-${dataArquivo()}.xlsx`, 'Histórico', colunas, linhas);

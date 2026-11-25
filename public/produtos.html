@@ -112,6 +112,26 @@
       <h2 id="titulo-edicao">Editar produto</h2>
       <form id="formulario-edicao" novalidate>
         <div class="grade">
+          <div class="dois">
+            <label for="ed_nome">Nome do produto</label>
+            <input id="ed_nome">
+          </div>
+          <div>
+            <label for="ed_categoria">Categoria</label>
+            <input id="ed_categoria">
+          </div>
+          <div>
+            <label for="ed_sku">Código (SKU)</label>
+            <input id="ed_sku">
+          </div>
+          <div>
+            <label for="ed_preco">Preço unitário (R$)</label>
+            <input id="ed_preco" type="number" min="0" step="0.01">
+          </div>
+          <div class="largo">
+            <label for="ed_descricao">Descrição (opcional)</label>
+            <input id="ed_descricao">
+          </div>
           <div>
             <label for="ed_estoque_minimo">Estoque mínimo (gera alerta)</label>
             <input id="ed_estoque_minimo" type="number" min="0" step="1">
@@ -172,6 +192,7 @@
     const resumoReposicao = document.getElementById('resumo-reposicao');
 
     let ehAdministrador = false;
+    let podeEditar = false;
     let produtoEmEdicao = null;
 
     // Regras de validação: mensagem exibida logo abaixo de cada campo
@@ -200,6 +221,15 @@
     ];
 
     const REGRAS_EDICAO = [
+      { id: 'ed_nome', vazio: 'Informe o nome do produto.', invalido: () => false, mensagemInvalido: '' },
+      { id: 'ed_categoria', vazio: 'Informe a categoria.', invalido: () => false, mensagemInvalido: '' },
+      { id: 'ed_sku', vazio: 'Informe o código (SKU).', invalido: () => false, mensagemInvalido: '' },
+      {
+        id: 'ed_preco',
+        vazio: 'Informe o preço.',
+        invalido: (v) => Number.isNaN(Number(v)) || Number(v) < 0,
+        mensagemInvalido: 'Informe um preço válido (maior ou igual a zero).',
+      },
       {
         id: 'ed_estoque_minimo',
         vazio: 'Informe o estoque mínimo.',
@@ -321,6 +351,11 @@
     function abrirEdicao(produto) {
       produtoEmEdicao = produto;
       document.getElementById('titulo-edicao').textContent = 'Editar produto: ' + produto.nome;
+      document.getElementById('ed_nome').value = produto.nome;
+      document.getElementById('ed_categoria').value = produto.categoria;
+      document.getElementById('ed_sku').value = produto.sku;
+      document.getElementById('ed_preco').value = produto.preco;
+      document.getElementById('ed_descricao').value = produto.descricao || '';
       document.getElementById('ed_estoque_minimo').value = produto.estoque_minimo;
       document.getElementById('ed_unidade_medida').value = produto.unidade_medida;
       document.getElementById('ed_codigo_barras').value = produto.codigo_barras || '';
@@ -329,7 +364,7 @@
       exibir(mensagemLista, '', '');
       cartaoEdicao.style.display = 'block';
       cartaoEdicao.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      document.getElementById('ed_estoque_minimo').focus({ preventScroll: true });
+      document.getElementById('ed_nome').focus({ preventScroll: true });
     }
 
     function fecharEdicao() {
@@ -375,7 +410,7 @@
           linha.appendChild(celula);
         });
 
-        if (ehAdministrador) {
+        if (podeEditar) {
           const celula = document.createElement('td');
           celula.className = 'sem-quebra';
           const botao = document.createElement('button');
@@ -393,7 +428,7 @@
     }
 
     // O formulário aparece para o administrador e para funcionários liberados.
-    // A edição (botão Editar) é exclusiva do administrador.
+    // A edição (botão Editar) segue a mesma permissão do cadastro.
     fetch('/api/produtos/permissao')
       .then((r) => {
         if (r.status === 401) {
@@ -405,7 +440,8 @@
       .then((permissao) => {
         if (!permissao) return;
         ehAdministrador = permissao.administrador === true;
-        if (ehAdministrador) {
+        podeEditar = permissao.pode_cadastrar === true;
+        if (podeEditar) {
           document.getElementById('th-acoes').style.display = '';
         }
         if (!permissao.pode_cadastrar) {
@@ -468,6 +504,11 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          nome: document.getElementById('ed_nome').value,
+          categoria: document.getElementById('ed_categoria').value,
+          sku: document.getElementById('ed_sku').value,
+          preco: document.getElementById('ed_preco').value,
+          descricao: document.getElementById('ed_descricao').value,
           estoque_minimo: document.getElementById('ed_estoque_minimo').value,
           unidade_medida: document.getElementById('ed_unidade_medida').value,
           codigo_barras: document.getElementById('ed_codigo_barras').value,

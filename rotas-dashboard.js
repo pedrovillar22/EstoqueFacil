@@ -74,7 +74,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
                   COALESCE(SUM(quantidade), 0)::int AS unidades_vendidas,
                   COALESCE(SUM(valor_total), 0) AS faturamento
            FROM movimentacoes
-           WHERE tipo = 'saida'
+           WHERE tipo = 'saida' AND estornada_em IS NULL
              AND empresa_id = $1
              AND ${FILTRO_PERIODO}`,
           periodo
@@ -84,7 +84,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
           `SELECT COUNT(*)::int AS qtd_entradas,
                   COALESCE(SUM(quantidade), 0)::int AS unidades_entrada
            FROM movimentacoes
-           WHERE tipo = 'entrada'
+           WHERE tipo = 'entrada' AND estornada_em IS NULL
              AND empresa_id = $1
              AND ${FILTRO_PERIODO}`,
           periodo
@@ -94,7 +94,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
           `SELECT p.nome, SUM(m.quantidade)::int AS vendidos
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
-           WHERE m.tipo = 'saida'
+           WHERE m.tipo = 'saida' AND m.estornada_em IS NULL
              AND m.empresa_id = $1
              AND ${FILTRO_PERIODO_M}
            GROUP BY p.id, p.nome
@@ -119,7 +119,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
                   COUNT(m.id)::int AS qtd_vendas
            FROM generate_series($2::timestamp, $3::timestamp, interval '1 day') AS d
            LEFT JOIN movimentacoes m
-             ON m.tipo = 'saida'
+             ON m.tipo = 'saida' AND m.estornada_em IS NULL
             AND m.empresa_id = $1
             AND (m.criado_em AT TIME ZONE 'America/Sao_Paulo')::date = d::date
            GROUP BY d
