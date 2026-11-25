@@ -19,7 +19,7 @@ router.get('/sugestao', exigirLoginApi, async (req, res) => {
        FROM produtos p
        LEFT JOIN movimentacoes m
          ON m.produto_id = p.id
-        AND m.tipo = 'saida'
+        AND m.tipo = 'saida' AND m.estornada_em IS NULL
         AND m.criado_em >= NOW() - INTERVAL '30 days'
        WHERE p.empresa_id = $1
        GROUP BY p.id

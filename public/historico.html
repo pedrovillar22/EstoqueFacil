@@ -57,6 +57,7 @@
       <div class="resumo-filtro">
         <span id="contador"></span>
         <button type="button" id="limpar" class="secundario" style="width: auto; margin: 0; padding: 6px 12px;">Limpar filtros</button>
+        <a href="/api/exportar/historico" download class="secundario" style="display:inline-block;width:auto;margin:0;padding:6px 12px;text-decoration:none;">Exportar para Excel</a>
       </div>
 
       <div id="mensagem"></div>
@@ -72,6 +73,7 @@
               <th>Valor total</th>
               <th>Usuário</th>
               <th>Observação</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody id="lista"></tbody>
@@ -139,6 +141,23 @@
       });
     }
 
+    async function estornar(m) {
+      const nomeTipo = m.tipo === 'entrada' ? 'entrada' : 'venda';
+      if (!confirm('Estornar esta ' + nomeTipo + ' de ' + m.quantidade + ' unidade(s) de "' + m.produto + '"? O estoque será ajustado e a movimentação ficará marcada como estornada.')) return;
+      try {
+        const resposta = await fetch('/api/estorno/' + m.id, { method: 'POST' });
+        const dados = await resposta.json();
+        if (!resposta.ok) {
+          mostrar(dados.erro, 'erro');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+        location.reload();
+      } catch (erro) {
+        mostrar('Erro de conexão. Tente novamente.', 'erro');
+      }
+    }
+
     function filtrar() {
       const termo = normalizar(campoBusca.value.trim());
       const tipo = selectTipo.value;
@@ -187,7 +206,7 @@
           new Date(m.criado_em).toLocaleString('pt-BR'),
           m.produto,
           m.sku,
-          m.tipo === 'entrada' ? 'Entrada' : 'Venda',
+          (m.tipo === 'entrada' ? 'Entrada' : 'Venda') + (m.estornada_em ? ' (estornada)' : ''),
           m.quantidade,
           formatarValor(m.valor_total),
           m.usuario,
@@ -198,6 +217,20 @@
           if ([0, 3, 4, 5].includes(posicao)) celula.className = 'sem-quebra';
           linha.appendChild(celula);
         });
+        if (m.estornada_em) linha.style.opacity = '0.55';
+        const celulaAcao = document.createElement('td');
+        if (m.estornada_em) {
+          celulaAcao.textContent = 'Estornada';
+        } else {
+          const botao = document.createElement('button');
+          botao.type = 'button';
+          botao.className = 'secundario';
+          botao.style.cssText = 'width:auto;margin:0;padding:6px 12px;';
+          botao.textContent = 'Estornar';
+          botao.addEventListener('click', () => estornar(m));
+          celulaAcao.appendChild(botao);
+        }
+        linha.appendChild(celulaAcao);
         lista.appendChild(linha);
       });
     }

@@ -78,7 +78,7 @@
         <button type="button" class="atalho" data-atalho="mes">Este mês</button>
         <button type="button" class="atalho" data-atalho="mesanterior">Mês anterior</button>
       </div>
-      <p class="dica">O período vale para vendas, faturamento, entradas e produtos mais vendidos. Estoque e alertas mostram a situação atual.</p>
+      <p class="dica">O período vale para vendas, faturamento, entradas e produtos mais vendidos. Estoque, alertas e equipe mostram a situação atual.</p>
     </div>
 
     <div class="resumo">
@@ -99,6 +99,10 @@
         <div class="valor" id="estoque-baixo">-</div>
       </div>
       <div class="card">
+        <div class="rotulo">Usuários da equipe</div>
+        <div class="valor" id="total-usuarios">-</div>
+      </div>
+      <div class="card">
         <div class="rotulo">Vendas no período</div>
         <div class="valor" id="vendas-mes">-</div>
       </div>
@@ -109,6 +113,31 @@
       <div class="card">
         <div class="rotulo">Entradas no período</div>
         <div class="valor" id="entradas-mes">-</div>
+      </div>
+    </div>
+
+    <div class="duas-colunas">
+      <div class="card">
+        <h2>Produtos para repor</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Quantidade</th>
+              <th>Mínimo</th>
+            </tr>
+          </thead>
+          <tbody id="repor"></tbody>
+        </table>
+        <p style="margin-top: 12px;"><a href="/reposicao.html">Ver reposição completa</a></p>
+      </div>
+
+      <div class="card">
+        <h2>Situação do estoque</h2>
+        <div class="area-grafico menor" id="area-situacao-estoque">
+          <canvas id="grafico-situacao-estoque"></canvas>
+        </div>
+        <p class="sem-dados" id="vazio-situacao-estoque" style="display: none;">Nenhum produto cadastrado.</p>
       </div>
     </div>
 
@@ -326,6 +355,36 @@
       });
     }
 
+    let graficoSituacaoEstoque = null;
+
+    function desenharGraficoSituacaoEstoque(total, repor) {
+      const area = document.getElementById('area-situacao-estoque');
+      const vazio = document.getElementById('vazio-situacao-estoque');
+      if (graficoSituacaoEstoque) {
+        graficoSituacaoEstoque.destroy();
+        graficoSituacaoEstoque = null;
+      }
+      if (total === 0) {
+        area.style.display = 'none';
+        vazio.style.display = 'block';
+        return;
+      }
+      area.style.display = '';
+      vazio.style.display = 'none';
+      graficoSituacaoEstoque = new Chart(document.getElementById('grafico-situacao-estoque'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Em dia', 'Repor'],
+          datasets: [{ data: [total - repor, repor], backgroundColor: ['#27ae60', '#c0392b'] }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+        },
+      });
+    }
+
     async function carregarDashboard() {
       const inicio = campoInicio.value;
       const fim = campoFim.value;
@@ -358,19 +417,27 @@
       baixo.textContent = dados.estoque_baixo;
       baixo.classList.toggle('alerta', dados.estoque_baixo > 0);
 
+      document.getElementById('total-usuarios').textContent = dados.total_usuarios;
+
       document.getElementById('vendas-mes').textContent = dados.vendas_mes.qtd_vendas;
       document.getElementById('faturamento-mes').textContent = dinheiro(dados.vendas_mes.faturamento);
       document.getElementById('entradas-mes').textContent = dados.entradas_mes.qtd_entradas;
 
       desenharGraficoVendasDia(dados.vendas_por_dia);
       desenharGraficoMaisVendidos(dados.mais_vendidos);
+      desenharGraficoSituacaoEstoque(dados.produtos.total_produtos, dados.estoque_baixo);
+      preencherTabela(
+        'repor',
+        dados.repor.map((r) => [r.nome, r.quantidade + ' ' + r.unidade_medida, r.estoque_minimo + ' ' + r.unidade_medida]),
+        3
+      );
 
       preencherTabela(
         'ultimas',
         dados.ultimas_movimentacoes.map((m) => [
           dataHora(m.criado_em),
           m.produto,
-          m.tipo === 'entrada' ? 'Entrada' : 'Venda',
+          (m.tipo === 'entrada' ? 'Entrada' : 'Venda') + (m.estornada_em ? ' (estornada)' : ''),
           m.quantidade,
         ]),
         4

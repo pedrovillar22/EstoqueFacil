@@ -153,16 +153,27 @@ router.post('/', exigirLoginApi, exigirPermissaoCadastro, async (req, res) => {
   }
 });
 
-router.put('/:id', exigirLoginApi, exigirAdministrador, async (req, res) => {
+router.put('/:id', exigirLoginApi, exigirPermissaoCadastro, async (req, res) => {
   const id = Number(req.params.id);
-  const { estoque_minimo, unidade_medida, codigo_barras } = req.body;
+  const { nome, sku, categoria, descricao, preco, estoque_minimo, unidade_medida, codigo_barras } = req.body;
 
+  const nomeLimpo = (nome || '').trim();
+  const skuLimpo = (sku || '').trim();
+  const categoriaLimpa = (categoria || '').trim();
+  const descricaoLimpa = (descricao || '').trim();
   const unidade = (unidade_medida || '').trim();
   const codigoBarrasLimpo = (codigo_barras || '').trim() || null;
+  const valor = preco === '' || preco == null ? NaN : Number(preco);
   const minimo = estoque_minimo === '' || estoque_minimo == null ? NaN : Number(estoque_minimo);
 
   if (!Number.isInteger(id) || id <= 0) {
     return res.status(400).json({ erro: 'Produto inválido.' });
+  }
+  if (!nomeLimpo || !skuLimpo || !categoriaLimpa) {
+    return res.status(400).json({ erro: 'Preencha os campos obrigatórios: nome do produto, código (SKU) e categoria.' });
+  }
+  if (Number.isNaN(valor) || valor < 0) {
+    return res.status(400).json({ erro: 'Informe um preço válido (maior ou igual a zero).' });
   }
   if (!Number.isInteger(minimo) || minimo < 0) {
     return res.status(400).json({ erro: 'O estoque mínimo deve ser um número inteiro maior ou igual a zero.' });
@@ -177,10 +188,11 @@ router.put('/:id', exigirLoginApi, exigirAdministrador, async (req, res) => {
   try {
     const resultado = await pool.query(
       `UPDATE produtos
-       SET estoque_minimo = $1, unidade_medida = $2, codigo_barras = $3
-       WHERE id = $4 AND empresa_id = $5
+       SET nome = $1, sku = $2, categoria = $3, descricao = $4, preco = $5,
+           estoque_minimo = $6, unidade_medida = $7, codigo_barras = $8
+       WHERE id = $9 AND empresa_id = $10
        RETURNING id, nome`,
-      [minimo, unidade, codigoBarrasLimpo, id, req.session.usuario.empresa_id]
+      [nomeLimpo, skuLimpo, categoriaLimpa, descricaoLimpa, valor, minimo, unidade, codigoBarrasLimpo, id, req.session.usuario.empresa_id]
     );
 
     if (resultado.rowCount === 0) {
@@ -190,7 +202,10 @@ router.put('/:id', exigirLoginApi, exigirAdministrador, async (req, res) => {
     res.json(resultado.rows[0]);
   } catch (erro) {
     if (erro.code === '23505') {
-      return res.status(409).json({ erro: 'Já existe um produto cadastrado com esse código de barras.' });
+      if (erro.constraint === 'produtos_empresa_codigo_barras_key') {
+        return res.status(409).json({ erro: 'Já existe um produto cadastrado com esse código de barras.' });
+      }
+      return res.status(409).json({ erro: 'Já existe um produto cadastrado com esse código (SKU).' });
     }
     console.error(erro);
     res.status(500).json({ erro: 'Erro no servidor. Tente novamente.' });

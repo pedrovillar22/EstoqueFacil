@@ -49,7 +49,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
   const periodo = [req.session.usuario.empresa_id, inicio, fim];
 
   try {
-    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia] =
+    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia, paraRepor, usuarios] =
       await Promise.all([
         // Total de produtos, unidades e valor do estoque (situação atual)
         pool.query(
@@ -74,7 +74,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
                   COALESCE(SUM(quantidade), 0)::int AS unidades_vendidas,
                   COALESCE(SUM(valor_total), 0) AS faturamento
            FROM movimentacoes
-           WHERE tipo = 'saida'
+           WHERE tipo = 'saida' AND estornada_em IS NULL
              AND empresa_id = $1
              AND ${FILTRO_PERIODO}`,
           periodo
@@ -84,7 +84,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
           `SELECT COUNT(*)::int AS qtd_entradas,
                   COALESCE(SUM(quantidade), 0)::int AS unidades_entrada
            FROM movimentacoes
-           WHERE tipo = 'entrada'
+           WHERE tipo = 'entrada' AND estornada_em IS NULL
              AND empresa_id = $1
              AND ${FILTRO_PERIODO}`,
           periodo
@@ -94,7 +94,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
           `SELECT p.nome, SUM(m.quantidade)::int AS vendidos
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
-           WHERE m.tipo = 'saida'
+           WHERE m.tipo = 'saida' AND m.estornada_em IS NULL
              AND m.empresa_id = $1
              AND ${FILTRO_PERIODO_M}
            GROUP BY p.id, p.nome
@@ -104,7 +104,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
         ),
         // Últimas 5 movimentações (sempre as mais recentes)
         pool.query(
-          `SELECT m.id, m.tipo, m.quantidade, m.criado_em, p.nome AS produto
+          `SELECT m.id, m.tipo, m.quantidade, m.criado_em, m.estornada_em, p.nome AS produto
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
            WHERE m.empresa_id = $1
@@ -119,12 +119,29 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
                   COUNT(m.id)::int AS qtd_vendas
            FROM generate_series($2::timestamp, $3::timestamp, interval '1 day') AS d
            LEFT JOIN movimentacoes m
-             ON m.tipo = 'saida'
+             ON m.tipo = 'saida' AND m.estornada_em IS NULL
             AND m.empresa_id = $1
             AND (m.criado_em AT TIME ZONE 'America/Sao_Paulo')::date = d::date
            GROUP BY d
            ORDER BY d`,
           periodo
+        ),
+        // Produtos que precisam de reposição, os mais críticos primeiro
+        pool.query(
+          `SELECT nome, quantidade, estoque_minimo, unidade_medida
+           FROM produtos
+           WHERE empresa_id = $1
+             AND quantidade <= estoque_minimo
+           ORDER BY (quantidade - estoque_minimo) ASC, nome ASC
+           LIMIT 5`,
+          empresa
+        ),
+        // Quantidade de usuários da equipe (situação atual)
+        pool.query(
+          `SELECT COUNT(*)::int AS total
+           FROM usuarios
+           WHERE empresa_id = $1`,
+          empresa
         )
       ]);
 
@@ -132,11 +149,13 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
       periodo: { inicio, fim },
       produtos: totais.rows[0],
       estoque_baixo: baixo.rows[0].total,
+      total_usuarios: usuarios.rows[0].total,
       vendas_mes: vendasPeriodo.rows[0],
       entradas_mes: entradasPeriodo.rows[0],
       mais_vendidos: maisVendidos.rows,
       ultimas_movimentacoes: ultimas.rows,
-      vendas_por_dia: vendasPorDia.rows
+      vendas_por_dia: vendasPorDia.rows,
+      repor: paraRepor.rows
     });
   } catch (erro) {
     console.error(erro);
