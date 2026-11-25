@@ -49,7 +49,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
   const periodo = [req.session.usuario.empresa_id, inicio, fim];
 
   try {
-    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia, usuarios] =
+    const [totais, baixo, vendasPeriodo, entradasPeriodo, maisVendidos, ultimas, vendasPorDia, paraRepor, usuarios] =
       await Promise.all([
         // Total de produtos, unidades e valor do estoque (situação atual)
         pool.query(
@@ -104,7 +104,7 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
         ),
         // Últimas 5 movimentações (sempre as mais recentes)
         pool.query(
-          `SELECT m.id, m.tipo, m.quantidade, m.criado_em, p.nome AS produto
+          `SELECT m.id, m.tipo, m.quantidade, m.criado_em, m.estornada_em, p.nome AS produto
            FROM movimentacoes m
            JOIN produtos p ON p.id = m.produto_id
            WHERE m.empresa_id = $1
@@ -126,6 +126,16 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
            ORDER BY d`,
           periodo
         ),
+        // Produtos que precisam de reposição, os mais críticos primeiro
+        pool.query(
+          `SELECT nome, quantidade, estoque_minimo, unidade_medida
+           FROM produtos
+           WHERE empresa_id = $1
+             AND quantidade <= estoque_minimo
+           ORDER BY (quantidade - estoque_minimo) ASC, nome ASC
+           LIMIT 5`,
+          empresa
+        ),
         // Quantidade de usuários da equipe (situação atual)
         pool.query(
           `SELECT COUNT(*)::int AS total
@@ -144,7 +154,8 @@ router.get('/resumo', exigirLoginApi, async (req, res) => {
       entradas_mes: entradasPeriodo.rows[0],
       mais_vendidos: maisVendidos.rows,
       ultimas_movimentacoes: ultimas.rows,
-      vendas_por_dia: vendasPorDia.rows
+      vendas_por_dia: vendasPorDia.rows,
+      repor: paraRepor.rows
     });
   } catch (erro) {
     console.error(erro);
